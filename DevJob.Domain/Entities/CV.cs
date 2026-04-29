@@ -21,12 +21,9 @@ namespace DevJob.Domain.Entities
         public int userprofileId { get; set; }
         public string Hash { get; set; }
         public bool IsDeleted { get; set; } = false;
-        public ICollection <Education> Educations { get; set; }
-        public ICollection<Experience> Experiences { get; set; }
         public ICollection <Projects> Projects { get; set; }
         public ICollection<ProjectSkills> ProjectSkills { get; set; }
         public ICollection<Skills> Skills { get; set; }
-        public ICollection <Trainning> Trainnings { get; set; }
         public ICollection <UserCvData> UserCvDatas { get; set; }
         
     }

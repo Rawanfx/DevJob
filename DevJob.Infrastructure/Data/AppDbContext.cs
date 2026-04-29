@@ -25,14 +25,10 @@ namespace DevJob.Infrastructure.Data
         public DbSet<UserCvData> UserCvDatas { get; set; }
         public DbSet<Skills> Skills { get; set; }
         public DbSet<CV> CVs { get; set; }
-        public DbSet<Education> Educations { get; set; }
         public DbSet<Projects> Projects { get; set; }
         public DbSet<ProjectSkills> ProjectSkills { get; set; }
-        public DbSet<SkillsGap> skillsGaps { get; set; }
-        public DbSet<Trainning> trainnings { get; set; }
         public DbSet<UserJob> UserJobs{ get; set; }
         public DbSet<UserSkills> UserSkills { get; set; }
-        public DbSet<Experience> Experiences { get; set; }
         public DbSet<SearchKeyWord> SearchKeyWords { get; set; }
         public DbSet<RecommendedJobs> RecommendedJobs { get; set; }
         public DbSet<UserPreferenceـJobs> UserPreferenceـJobs { get; set; }

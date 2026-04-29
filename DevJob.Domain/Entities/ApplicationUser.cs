@@ -11,8 +11,6 @@ namespace DevJob.Domain.Entities
         public string? DeviceId { get; set; }
         public DateTime RefreshTokenExpirationDate { get; set; }
         public IList<CV> CVs { get; set; }
-        public IList<Education>Educations { get; set; }
-        public IList<Experience> Experiences { get; set; }
         public IList<Projects> Projects { get; set;
         }
         
