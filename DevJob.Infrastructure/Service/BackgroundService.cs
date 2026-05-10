@@ -18,6 +18,7 @@ using System.Text.Json.Nodes;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Web;
+using Google.Apis.Http;
 
 namespace DevJob.Infrastructure.Service
 {
@@ -27,26 +28,15 @@ namespace DevJob.Infrastructure.Service
         private readonly IUnitOfWork unitOfWork;
         private readonly IHttpClientFactory httpClientFactory;
         private readonly IMailServices mailServices;
-        private readonly IJobRepository jobRepository;
-        private readonly IUserCvDataRepository userCvDataRepository;
-        private readonly IUserSkillsRepository userSkillsRepository;
-        private readonly IRecommendedJobRepository recommendedJobRepository;
         public BackgroundService(IUnitOfWork unitOfWork, IConfiguration configuration
             , IHttpClientFactory httpClientFactory
             , IMailServices mailServices
-            ,IJobRepository jobRepository
-            ,IUserCvDataRepository userCvDataRepository
-            ,IUserSkillsRepository userSkillsRepository
-            ,IRecommendedJobRepository recommendedJobRepository)
+            )
         {
             this.unitOfWork=unitOfWork;
             this.configuration = configuration;
             this.httpClientFactory = httpClientFactory;
             this.mailServices = mailServices;
-            this.userCvDataRepository = userCvDataRepository;
-            this.recommendedJobRepository = recommendedJobRepository;
-            this.userSkillsRepository = userSkillsRepository;
-            this.jobRepository = jobRepository;
         }
         private string InitialSanitize(string text)
         {
@@ -325,12 +315,12 @@ namespace DevJob.Infrastructure.Service
             var job = await unitOfWork.Jobs.FirstOrDefaultAsync(x=>x.Id==jobId);
             if (job == null)
                 return;
-            var jobSkills = await jobRepository.GetJobSkills(new List<int>() { jobId });
+            var jobSkills = await unitOfWork.Jobs .GetJobSkills(new List<int>() { jobId });
             var currentJobSkills = string.Join(',', jobSkills);
             var jobData = $"Description: {job.Description}. Required Skills: {currentJobSkills}";
             //get allusers
 
-            var rowData = await userCvDataRepository.GetUserData();
+            var rowData = await unitOfWork.UserCvData .GetUserData();
           
             var allUsers = rowData.GroupBy(x => x.userId)
                 .Select(x => new AiUserRequest()
@@ -344,7 +334,7 @@ namespace DevJob.Infrastructure.Service
             var url = configuration["matchScoreUrl"];
             using var httpClient = httpClientFactory.CreateClient();
             List<RecommendedJobs> recommendedJobsToSave = new();
-            var recommendeInDb = await recommendedJobRepository.RecommendedJobs();
+            var recommendeInDb = await unitOfWork.RecommendedJobs .RecommendedJobs();
             var requestBody = new AiMatcheRequest()
             {
                 cvs = allUsers,
@@ -394,7 +384,7 @@ namespace DevJob.Infrastructure.Service
 
         public async Task CalculateMatchJobs()
         {
-            var rowData = await userCvDataRepository.GetUserData();
+            var rowData = await unitOfWork.UserCvData .GetUserData();
 
             var allUsers = rowData.GroupBy(x => x.userId)
                 .Select(x => new AiUserRequest()
@@ -409,7 +399,7 @@ namespace DevJob.Infrastructure.Service
             var jobs = await unitOfWork.Jobs.Where(x =>!x.IsProcessed&&  x.IsActive)
                 .ToListAsync();
             var jobIds = jobs.Select(x => x.Id).ToList();
-            List<JobWithSkillsDto> jobSkills =await jobRepository.GetJobSkills(jobIds);
+            List<JobWithSkillsDto> jobSkills =await unitOfWork.Jobs .GetJobSkills(jobIds);
 
             if (!jobs.Any()) return;
 
@@ -480,35 +470,7 @@ namespace DevJob.Infrastructure.Service
 
             await unitOfWork.SaveChangesAsync();
         }
-        //public async Task CalculateMatchJobsWithoutAi()
-        //{
-        //    //get all users
-        //    //get all jobs
-        //    //add in recommended jobs
-        //    List<RecommendedJobs> recommendedJobs = new();
-        //    var users = await context.userCvDatas.ToListAsync();
-        //    var jobs = await context.Jobs.Where(x => x.IsActive).ToListAsync();
-        //    foreach (var user in users)
-        //    {
-        //        foreach (var job in jobs)
-        //        {
-        //            recommendedJobs.Add(new RecommendedJobs()
-        //            {
-        //                jobId = job.Id,
-        //                MatchScore = 50,
-        //                userId = user.Id,
-
-        //            });
-        //        }
-        //    }
-        //    foreach (var job in jobs)
-        //    {
-        //        job.IsProcessed = true;
-        //    }
-
-        //    await context.recommendedJobs.AddRangeAsync(recommendedJobs);
-        //    await context.SaveChangesAsync();
-        //}
+     
         public async Task PrepareRecommendedJobs(string user, int cvId)
         {
             //first in db
@@ -517,18 +479,18 @@ namespace DevJob.Infrastructure.Service
             && x.cvId == cvId
             && x.CV.IsDeleted == false).Select(x => x.Id).FirstOrDefaultAsync();
 
-            var userdata = await userCvDataRepository.GetActiveUserWithCvById(userId);
+            var userdata = await unitOfWork.UserCvData .GetActiveUserWithCvById(userId);
              
             if (userdata == null)
                 return;
 
-            var skill = await userSkillsRepository.GetUserSkills(cvId, userId);
+            var skill = await unitOfWork.UserSkills .GetUserSkills(cvId, userId);
 
             var jobs = await unitOfWork.Jobs
                 .Where(x=>x.IsActive)
                 .ToListAsync();
             var jobIds = jobs.Select(x => x.Id).ToList();
-            var jobSkills = await jobRepository.GetJobSkills(jobIds);
+            var jobSkills = await unitOfWork.Jobs .GetJobSkills(jobIds);
             // cv_text = $"job_title: {x.First().jobTitle}, Skills: {string.Join(", ", x.Select(y => y.skills).Distinct())}"  
             //string.Join(',', skill, userdata.JobTitle);
             var cv_text = $"job_title: {userdata.JobTitle}, Skills: {string.Join(",",skill)}";
@@ -662,11 +624,12 @@ namespace DevJob.Infrastructure.Service
         //  //  await ProcessAiMatching(userCvData.Id, userSkills, jobsQuery);
         //}
 
+       
         private async Task ProcessAiMatching(int userId, List<string> skills, List<Job> jobs)
         {
             if (!jobs.Any()) return;
 
-            var user = await userCvDataRepository.GetActiveUserWithCvById(userId);
+            var user = await unitOfWork.UserCvData .GetActiveUserWithCvById(userId);
             if (user == null)
                 return;
             var cv_text = $"job_title: {user.JobTitle}, Skills: {string.Join(",", skills)}";
@@ -681,7 +644,7 @@ namespace DevJob.Infrastructure.Service
                    .ToListAsync();
 
             var jobIds = jobs.Select(x => x.Id).ToList();
-            var jobSkills = await jobRepository.GetJobSkills(jobIds);
+            var jobSkills = await unitOfWork.Jobs .GetJobSkills(jobIds);
 
             var recommendedToAdd = new List<RecommendedJobs>();
             foreach (var job in jobs)

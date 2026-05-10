@@ -16,23 +16,15 @@ namespace DevJob.Infrastructure.Service
         private readonly IUnitOfWork unitOfWork;
         private readonly UserManager<ApplicationUser> userManager;
         private readonly IUploadToAzure uploadToAzure;
-        private readonly ICompanyRepository companyRepository;
-        private readonly IJobRepository jobRepository;
-        private readonly IUserSkillsRepository userSkillsRepository;
         public CompanyServices(IUnitOfWork unitOfWork,
             UserManager<ApplicationUser> userManager
             , IUploadToAzure uploadToAzure
-            , ICompanyRepository companyRepository
-            , IJobRepository jobRepository
-            ,IUserSkillsRepository userSkillsRepository
+           
             )
         {
             this.unitOfWork = unitOfWork;
             this.userManager = userManager;
             this.uploadToAzure=uploadToAzure;
-            this.companyRepository = companyRepository;
-            this.jobRepository = jobRepository;
-            this.userSkillsRepository = userSkillsRepository;
         }
 
         public async Task<GetApplicantResultDto> ApplicantSearch(string companyId, string item,int jobId)
@@ -43,11 +35,11 @@ namespace DevJob.Infrastructure.Service
             var job = await unitOfWork.Jobs.FirstOrDefaultAsync(x => x.Id == jobId && x.CompanyId == company.Id);
             if (job == null)
                 return new GetApplicantResultDto() { Success = false, Message = "Job Not Found" };
-            var applicants = await companyRepository.ApplicantSearch(item, jobId);
+            var applicants = await unitOfWork.CompanyProfile .ApplicantSearch(item, jobId);
             var applicantIds = applicants.Select(x => x.userId).ToHashSet();
-            var skills = await userSkillsRepository.GetUserSkills(applicantIds);
+            var skills = await unitOfWork.UserSkills .GetUserSkills(applicantIds);
 
-            var score = await jobRepository.GetScoreForApplicant(jobId);
+            var score = await unitOfWork.Jobs .GetScoreForApplicant(jobId);
           
 
             foreach (var i in applicants)

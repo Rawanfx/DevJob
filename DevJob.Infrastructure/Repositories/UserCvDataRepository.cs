@@ -1,8 +1,10 @@
 ﻿using DevJob.Application.DTOs.User;
-using DevJob.Domain.Entities;
 using DevJob.Application.Repository_Contract;
+using DevJob.Application.ServiceContract;
+using DevJob.Domain.Entities;
 using DevJob.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
+using System.ComponentModel;
 
 namespace DevJob.Infrastructure.Repositories
 {
@@ -18,6 +20,15 @@ namespace DevJob.Infrastructure.Repositories
                 .Include(x => x.CV)
                 .FirstOrDefaultAsync(x => x.Id == id && !x.CV.IsDeleted);
             return user;
+        }
+      
+        public async Task<List<int>> GetUserIds(string appUser)
+        {
+            var userIds = await context.UserCvDatas
+                .Where(x => x.UserId == appUser && !x.CV.IsDeleted)
+                .Select(x => x.Id)
+                .ToListAsync();
+            return userIds;
         }
 
         public async Task<List<GetUserDataDto>> GetUserData()
@@ -41,17 +52,10 @@ namespace DevJob.Infrastructure.Repositories
         {
             var userData = await context.UserCvDatas
                 .Include(x => x.CV)
-                .FirstOrDefaultAsync(x => x.Id == userId);
+                .FirstOrDefaultAsync(x => x.Id == userId && !x.CV.IsDeleted);
             return userData;
         }
 
-        public async Task<List<int>> GetUserIds(string appUser)
-        {
-            var userIds = await context.UserCvDatas
-                .Where(x => x.UserId == appUser)
-                .Select(x => x.Id)
-                .ToListAsync();
-            return userIds;
-        }
+      
     }
 }

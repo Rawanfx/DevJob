@@ -18,26 +18,18 @@ namespace DevJob.Infrastructure.Service
         private readonly IHubContext<MessageHub> hubContext;
         private readonly INotificationService notificationService;
         private IUnitOfWork unitOfWork;
-        private readonly IUserCvDataRepository userCvDataRepository;
-        private readonly IConversationRepository conversationRepository;
-        private readonly IChatRepository chatRepository;
         public ChatServices(IHubContext<MessageHub> hubContext
            ,INotificationService notificationService
             ,IUnitOfWork unitOfWork
-            ,IUserCvDataRepository userCvDataRepository
-            ,IConversationRepository conversationRepository
-            ,IChatRepository chatRepository)
+            )
         {
             this.hubContext = hubContext;
             this.unitOfWork = unitOfWork;
             this.notificationService = notificationService;
-            this.userCvDataRepository = userCvDataRepository;
-            this.chatRepository = chatRepository;
-            this.conversationRepository = conversationRepository;
         }
         public async Task<DisplayAllConversationResult> displayAllConversationResult(string user)
         {
-            var users = await userCvDataRepository.GetUserIds(user);
+            var users = await unitOfWork.UserCvData .GetUserIds(user);
             var company = await unitOfWork.CompanyProfile.FirstOrDefaultAsync(x => x.ApplicationUser == user);
             if (users == null && company==null)
                 throw new KeyNotFoundException("User not found") ;
@@ -45,20 +37,20 @@ namespace DevJob.Infrastructure.Service
             List<Conversation> conversations= new List<Conversation>();
             //company view
             if (users!=null &&users.Count > 0)
-                conversations = await conversationRepository.GetAllConvesationWithCompanyView(users);
+                conversations = await unitOfWork.Conversations .GetAllConvesationWithCompanyView(users);
             //developer view
             else
             {
                 List<int> companyIds = new List<int>() { company.Id };
-                conversations = await conversationRepository.GetAllConvesationWithDeveloperView(companyIds);
+                conversations = await unitOfWork.Conversations.GetAllConvesationWithDeveloperView(companyIds);
             }
             var conversationsId = conversations
                     .Select(x => x.Id)
                     .ToList();
 
-            var LastMessage = await chatRepository.GetLastMessage(conversationsId);
+            var LastMessage = await unitOfWork.Chats.GetLastMessage(conversationsId);
 
-            var unreadMessage = await chatRepository.GetUnreadCount(conversationsId, user);
+            var unreadMessage = await unitOfWork.Chats.GetUnreadCount(conversationsId, user);
             List<DisplayAllConversation> dispalyConversation = new List<DisplayAllConversation>();
               foreach (var con in conversations)
                 {
@@ -149,7 +141,7 @@ namespace DevJob.Infrastructure.Service
         public async Task<DisplayChatContent> LoadChat(string userId, int conversationId)
         {
 
-            var conversation = await conversationRepository.GetConversationWithCompanyProfile(conversationId);
+            var conversation = await unitOfWork.Conversations .GetConversationWithCompanyProfile(conversationId);
 
                 var developers = await unitOfWork.UserCvData.Where(x => x.UserId == userId).Select(x => x.Id).ToListAsync();
 
@@ -204,7 +196,7 @@ namespace DevJob.Infrastructure.Service
             if (message == null || message.IsDelete)
                 return new ResponseDto() { Success = false, Message = "Message Not Found" };
 
-            var conversation = await conversationRepository
+            var conversation = await unitOfWork.Conversations 
                 .GetConversationWithCompanyProfileAndDeveloper(deleteMessageDto.conversationId);
             if (conversation==null)
                 return new ResponseDto() { Success=false,Message="Conversation Not Found"};
@@ -232,7 +224,7 @@ namespace DevJob.Infrastructure.Service
         {
             Log.Information($"sending message parametars => userid : " +
                 $"{user} message :{sendMessageDto.Message} conversationId :{sendMessageDto.conversationId}");
-            var conversation = await conversationRepository
+            var conversation = await unitOfWork.Conversations
                 .GetConversationWithCompanyProfileAndDeveloper(sendMessageDto.conversationId);
             if (conversation == null)
                 return new ResponseDto() { Success = false, Message = "Conversation not found" };
@@ -293,7 +285,7 @@ namespace DevJob.Infrastructure.Service
         }
         public async Task<ResponseDto> UpdateMessage(UpdateMessageDto updateMessageDto, string user)
         {
-            var conversation = await conversationRepository
+            var conversation = await unitOfWork.Conversations 
                 .GetConversationWithCompanyProfileAndDeveloper(updateMessageDto.conversationId);
             if (conversation == null)
                 return new ResponseDto() { Success = false, Message = "Conversation not found" };
@@ -357,14 +349,14 @@ namespace DevJob.Infrastructure.Service
             
             if (developer != null)
             {
-                var conversations = await chatRepository.SearchByCompanyNameAsync(item);
+                var conversations = await unitOfWork.Chats.SearchByCompanyNameAsync(item);
 
                 var chatSummary =await GetLastMessages(conversations);
                 result.chatSummaryDto = chatSummary;
             }
             else
             {
-                var conversations = await chatRepository.SearchByDeveloperNameAsync(item);
+                var conversations = await unitOfWork.Chats.SearchByDeveloperNameAsync(item);
 
                 var chatSummary = await GetLastMessages(conversations);
                 result.chatSummaryDto = chatSummary;

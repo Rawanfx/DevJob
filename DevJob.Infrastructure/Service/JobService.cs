@@ -29,21 +29,13 @@ namespace DevJob.Infrastructure.Service
         private readonly INotificationService notificationService;
         private readonly ILogger<JobService> logger;
         private readonly IHubContext<JobHub> hubContext;
-        private readonly IJobRepository jobRepository;
-        private readonly IRecommendedJobRepository recommendedJobRepository;
-        private readonly IUserSkillsRepository userSkillsRepository;
-        private readonly IUserJobRepository userJobRepository;
         public JobService(IUnitOfWork unitOfWork, IMapper mapper,
             IConfiguration configuration
             , System.Net.Http.IHttpClientFactory httpClientFactory
             , INotificationService notificationService
             , ILogger<JobService> logger
             ,IHubContext<JobHub> hubContext
-            ,IJobRepository jobRepository
-            ,IRecommendedJobRepository recommendedJobRepository
-            ,IUserSkillsRepository userSkillsRepository
-            ,IUserJobRepository userJobRepository)
-        {
+)        {
             this.unitOfWork = unitOfWork;
             _mapper = mapper;
             this.configuration = configuration;
@@ -51,10 +43,6 @@ namespace DevJob.Infrastructure.Service
             this.logger = logger;
             this.notificationService = notificationService;
             this.hubContext = hubContext;
-            this.jobRepository = jobRepository;
-            this.recommendedJobRepository = recommendedJobRepository;
-            this.userSkillsRepository = userSkillsRepository;
-            this.userJobRepository = userJobRepository;
         }
         private string CleanDescription(string description)
         {
@@ -159,7 +147,7 @@ namespace DevJob.Infrastructure.Service
             if (companyId == null)
                 throw new KeyNotFoundException("Company Not Found");
 
-            var jobCount = await jobRepository.GetCountOfApplicantForJob(companyId.Id);
+            var jobCount = await unitOfWork.Jobs .GetCountOfApplicantForJob(companyId.Id);
 
             var jobs = await unitOfWork.Jobs.Where(x => x.CompanyId == companyId.Id && x.IsActive)
                 .Select(x => new AllJobsDto()
@@ -288,7 +276,7 @@ namespace DevJob.Infrastructure.Service
             if (userCvData == null)
                 return new ResultDto { Success = false, Message = "User CV not found" };
 
-            var job = await jobRepository.GetActiveJob(jobId);
+            var job = await unitOfWork.Jobs .GetActiveJob(jobId);
             if (job == null || job.Local==false)
                 return new ResultDto { Success = false, Message = "Job not found" };
 
@@ -362,7 +350,7 @@ namespace DevJob.Infrastructure.Service
             logger.LogInformation($"display recommended job with id {userId}");
             if (userCvData == null)
                 return new DisplayRecommendedJobsDto() { Success = false, Message = "User not Found" };
-            var recommendedJobs = await recommendedJobRepository.GetRecommendedJobForUser(userCvData);
+            var recommendedJobs = await unitOfWork.RecommendedJobs .GetRecommendedJobForUser(userCvData);
             DisplayRecommendedJobsDto displayRecommendedJobsDto = new DisplayRecommendedJobsDto()
             {
                 Success = true,
@@ -417,12 +405,12 @@ namespace DevJob.Infrastructure.Service
             if (!await unitOfWork.Jobs.AnyAsync(x => x.Id == jobId && x.CompanyId == company.Id))
                 return new GetApplicantResultDto() { Success = false, Message = "Job not found" };
 
-            var scores = await jobRepository.GetScoreForApplicant(jobId);
+            var scores = await unitOfWork.Jobs.GetScoreForApplicant(jobId);
 
             var userIds = await unitOfWork.UserJob.Where(x => x.jobID == jobId).Select(x => x.userId).ToHashSetAsync();
-            var userSkills = await userSkillsRepository.GetUserSkills(userIds);
+            var userSkills = await unitOfWork.UserSkills.GetUserSkills(userIds);
 
-            var applicantsList = await userJobRepository.GetApplicantsForJob(jobId);
+            var applicantsList = await unitOfWork.UserJob .GetApplicantsForJob(jobId);
 
             var applicantsDto = applicantsList.Select(x => new GetApplicantDto()
             {
@@ -674,7 +662,7 @@ namespace DevJob.Infrastructure.Service
             if (user == null)
                 return new DisplaySavedJobDtoResult() { Success = false, Message = "user not found" };
 
-            var requiredSkills = await jobRepository.GetRequiredSkills();
+            var requiredSkills = await unitOfWork.Jobs .GetRequiredSkills();
 
             var savedJobs = await unitOfWork.SavedJobs
                  .Where(x=>user.Contains(x.userId))
@@ -699,7 +687,7 @@ namespace DevJob.Infrastructure.Service
 
         public async Task<List<RecommendedJobDto>> JobSearch(string item)
         {
-            var result = await jobRepository.JobSearch(item);
+            var result = await unitOfWork.Jobs .JobSearch(item);
             return result;
         }
         public async Task<DisplaySavedJobDtoResult> SavedJobSearch(string item, string user)
@@ -709,7 +697,7 @@ namespace DevJob.Infrastructure.Service
                 .ToListAsync();
             if (userIds.Count == 0)
                 return new DisplaySavedJobDtoResult() { Success = false, Message = "User Not Found" };
-            var res = await jobRepository.SavedJobSearch(item, userIds);
+            var res = await unitOfWork.Jobs .SavedJobSearch(item, userIds);
             return new DisplaySavedJobDtoResult() { Success = true, displaySavedJobDtos = res };
         }
     }

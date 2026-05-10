@@ -1,4 +1,5 @@
-﻿using DevJob.Domain.Entities;
+﻿using DevJob.Application.Repository_Contract;
+using DevJob.Domain.Entities;
 
 namespace DevJob.Application.ServiceContract
 {
@@ -8,23 +9,23 @@ namespace DevJob.Application.ServiceContract
         Task RollBackAsync();
         Task CommitAsync();
         Task<int> SaveChangesAsync();
-        IRepository<chats> Chats { get; }
-        IRepository<CompanyProfile> CompanyProfile { get; }
-        IRepository<Conversation> Conversations { get; }
+        IChatRepository Chats { get; }
+        ICompanyRepository CompanyProfile { get; }
+        IConversationRepository Conversations { get; }
         IRepository<CV> Cvs { get; }
-        IRepository<Job> Jobs { get; }
+        IJobRepository Jobs { get; }
         IRepository<Notification> Notifications { get; }
-        IRepository<RecommendedJobs> RecommendedJobs { get; }
+        IRecommendedJobRepository RecommendedJobs { get; }
         IRepository<RequiredSkills> RequiredSkills { get; }
         IRepository<SavedJobs> SavedJobs { get; }
         IRepository<SearchKeyWord> SearchKeyWords { get; }
         IRepository<Skills> Skills { get; }
-        IRepository<UserCvData> UserCvData { get; }
+        IUserCvDataRepository UserCvData { get; }
         IRepository<UserPreference> UserPreference { get; }
         IRepository<UserPreferenceـJobs> UserPreferenceـJobs { get; }
         IRepository<UserPrefernce_Skills> UserPrefernce_Skills { get; }
         IRepository<UserProfile> UserProfile{ get; }
-        IRepository<UserSkills> UserSkills { get; }
-        IRepository<UserJob> UserJob { get; }
+        IUserSkillsRepository UserSkills { get; }
+        IUserJobRepository UserJob { get; }
     }
 }

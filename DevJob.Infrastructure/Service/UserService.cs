@@ -16,32 +16,31 @@ namespace DevJob.Infrastructure.Service
     public class UserService : IUserService
     {
         private readonly UserManager<ApplicationUser> userManager;
-        private AppDbContext context;
         private readonly IMailServices mailServices;
         private readonly IConfiguration configuration;
+        private readonly IUnitOfWork unitOfWork;
         public UserService(UserManager<ApplicationUser> userManager
             ,AppDbContext context
             ,IMailServices mailServices
-            ,IConfiguration configuration)
+            ,IConfiguration configuration
+            ,IUnitOfWork unitOfWork)
         {
            this.userManager = userManager;
-            this.context = context;
             this.mailServices = mailServices;
             this.configuration = configuration;
+            this.unitOfWork = unitOfWork;
         }
         public async Task< UserDataDto> GetUserData(string Id)
         {
             ApplicationUser? user = await userManager.FindByIdAsync(Id);
             if (user == null)
                 return new UserDataDto();
-            var userData = await context.UserCvDatas
-                .Include(x=>x.CV)
-                .Where(x => x.UserId == Id && !x.CV.IsDeleted)
-                .Select(x=>x.Id)
-                .ToListAsync();
+            var userData = await unitOfWork.UserCvData.GetUserIds(Id);
+
+
             if (userData.Count>0)
             return new UserDataDto() { Name = user.Name, userId = userData ,AppUser=Id};
-            var companyId = await context.Company.FirstOrDefaultAsync(x => x.ApplicationUser == Id);
+            var companyId = await unitOfWork.CompanyProfile.FirstOrDefaultAsync(x => x.ApplicationUser == Id);
             var userId = new List<int>() { companyId.Id};
             return new UserDataDto() {
                 AppUser=Id,
@@ -55,7 +54,7 @@ namespace DevJob.Infrastructure.Service
             ApplicationUser? user= await  userManager.FindByIdAsync(dataDTO.Id!);
             if (user == null)
                 return new UpdateUserDataDTO() { Success = false, Message = "User not found" };
-            UserProfile? userProfile = await context.UserProfile.Where(x => x.userId == dataDTO.Id)
+            UserProfile? userProfile = await unitOfWork.UserProfile.Where(x => x.userId == dataDTO.Id)
                 .FirstOrDefaultAsync();
             //update email
             
@@ -87,7 +86,7 @@ namespace DevJob.Infrastructure.Service
 
             if (dataDTO.Github != null)
                 userProfile.Github = dataDTO.Github;
-            await context.SaveChangesAsync();
+            await unitOfWork.SaveChangesAsync();
             await userManager.UpdateAsync(user);
             return new UpdateUserDataDTO()
                 {
@@ -121,12 +120,12 @@ namespace DevJob.Infrastructure.Service
         public async Task<ApplicantHistoryCountResult> ApplicantsCount(string user)
         {
             //get userCvId
-            var userCvData = await context.UserCvDatas.Where(x => x.UserId == user).Select(x=>x.Id).ToListAsync();
+            var userCvData = await unitOfWork.UserCvData.Where(x => x.UserId == user).Select(x=>x.Id).ToListAsync();
             if (userCvData == null)
                 return new ApplicantHistoryCountResult() { Success = false, Message = "User not found" };
-            var totalApply = await context.UserJobs.Where(x => userCvData.Contains(x.userId)).CountAsync();
-            var interview = await context.UserJobs.Where(x => userCvData.Contains(x.userId) && x.Status == Status.Interview).CountAsync();
-            var waiting = await context.UserJobs.Where(x => userCvData.Contains(x.userId) && x.Status == Status.New).CountAsync();
+            var totalApply = await unitOfWork.UserJob.Where(x => userCvData.Contains(x.userId)).CountAsync();
+            var interview = await unitOfWork.UserJob.Where(x => userCvData.Contains(x.userId) && x.Status == Status.Interview).CountAsync();
+            var waiting = await unitOfWork.UserJob.Where(x => userCvData.Contains(x.userId) && x.Status == Status.New).CountAsync();
             return new ApplicantHistoryCountResult() {
                 Success=true,
                 ApplicantHistoryCount= new ApplicantHistoryCount() { Interview=interview,TotalApplied=totalApply,Waiting=waiting}
@@ -135,8 +134,8 @@ namespace DevJob.Infrastructure.Service
 
         public async Task<List<ApplicationHistoryData>> ApplicationHistoryData(string user)
         {
-            var userCvData = await context.UserCvDatas.Where(x => x.UserId == user).Select(x=>x.Id).ToListAsync();
-            var jobs = await context.UserJobs.Where(x => userCvData.Contains(x.userId)).Select(x => new
+            var userCvData = await unitOfWork.UserCvData.Where(x => x.UserId == user).Select(x=>x.Id).ToListAsync();
+            var jobs = await unitOfWork.UserJob.Where(x => userCvData.Contains(x.userId)).Select(x => new
             ApplicationHistoryData()
             {
                 ApplyDate = x.AppliedAt,
@@ -149,15 +148,15 @@ namespace DevJob.Infrastructure.Service
         }
         public async Task<UserCount> UserCount(string user)
         {
-            var userCvData = await context.UserCvDatas.Where(x => x.UserId == user)
+            var userCvData = await unitOfWork.UserCvData.Where(x => x.UserId == user)
                 .Select(x=>x.Id)
                 .ToListAsync();
 
-            var userJobs = await context.UserJobs.Where(x => userCvData.Contains(x.userId)).ToListAsync();
+            var userJobs = await unitOfWork.UserJob.Where(x => userCvData.Contains(x.userId)).ToListAsync();
 
             var applied = userJobs.Count();
             var interview = userJobs.Where(x => x.Status == Status.Interview).Count();
-            var messages = await context.convesations
+            var messages = await unitOfWork.Conversations
      .Where(x => userCvData.Contains(x.UserId))
      .Select(x => x.CompanyId)
      .Distinct()
