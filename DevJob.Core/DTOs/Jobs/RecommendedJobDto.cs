@@ -16,6 +16,7 @@ namespace DevJob.Application.DTOs.Jobs
         public EmploymentType? EmploymentType { get; set; }
         public DateTime? DeadLine { get; set; }
         public string apply_Link { get; set; }
+        public string Source { get; set; }
 
     }
 }

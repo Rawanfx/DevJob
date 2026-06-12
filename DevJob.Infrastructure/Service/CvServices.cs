@@ -50,6 +50,24 @@ namespace DevJob.Infrastructure.Service
 
         public async Task<ResponseDto> Upload(string userId, IFormFile file)
         {
+            const long maxFileSize = 5 * 1024 * 1024;
+            if (file.Length > maxFileSize)
+                return new ResponseDto { Success = false, Message = "File size exceeds 5MB limit." };
+            using (var stream = file.OpenReadStream())
+            {
+                var header = new byte[4];
+                await stream.ReadAsync(header, 0, 4);
+                // PDF magic bytes: 25 50 44 46
+                if (header[0] != 0x25 || header[1] != 0x50 ||
+                    header[2] != 0x44 || header[3] != 0x46)
+                {
+                    return new ResponseDto
+                    {
+                        Success = false,
+                        Message = "Invalid file format. Only PDF files are allowed."
+                    };
+                }
+            }
             string fileHash;
             using (var sha256 = SHA256.Create())
             using (var stream = file.OpenReadStream())

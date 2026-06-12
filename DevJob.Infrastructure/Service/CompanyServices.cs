@@ -1,7 +1,6 @@
 ﻿using AutoMapper;
 using DevJob.Application.DTOs;
 using DevJob.Application.DTOs.Company;
-using DevJob.Application.DTOs.User;
 using DevJob.Domain.Entities;
 using DevJob.Application.ServiceContract;
 using DevJob.Infrastructure.Data;

@@ -90,7 +90,7 @@ namespace DevJob.Infrastructure.Repositories
                    PostedAt=x.PostedAt,
                 })
                 .ToListAsync();
-            return result;
+            return result.DistinctBy(x=>x.Title).ToList();
         }
         public async Task<List<DisplaySavedJobDto>> SavedJobSearch(string item, List<int> userIds)
         {
@@ -111,9 +111,8 @@ namespace DevJob.Infrastructure.Repositories
                 SavedDate=x.date,
                 Skills = jobSkills.GetValueOrDefault(x.jobId,new List<string>())
                 })
-                .Distinct()
                 .ToListAsync();
-            return result;
+            return result.DistinctBy(x => x.jobName).ToList();
         }
     }
 }

@@ -338,10 +338,11 @@ namespace DevJob.Infrastructure.Service
                     MatchScore=0,
                     PostedAt=x.PostedAt,
                     Title=x.Title,
-                    job_id=x.Id
+                    job_id=x.Id,
+                    Source= x.Source
                 }).Take(20)
                 .ToListAsync();
-            return jobs;
+            return jobs.DistinctBy(x => x.Title).ToList();
         }
         private async Task<DisplayRecommendedJobsDto> Helper(string userId)
         {
@@ -439,7 +440,7 @@ namespace DevJob.Infrastructure.Service
             if (company == null)
                 return new UpdateStatusResultDto() { Success = false, Message = "Company not found" };
 
-            if (!await unitOfWork.Jobs.AnyAsync(x => x.Id == updateStatusDto.JobId && x.CompanyId == company.Id))
+            if (!await unitOfWork.Jobs.AnyAsync(x => x.Id == updateStatusDto.JobId && x.CompanyId == company.Id ))
                 return new UpdateStatusResultDto() { Success = false, Message = "Job not found" };
             var userjob = await unitOfWork.UserJob.FirstOrDefaultAsync(x => x.jobID == updateStatusDto.JobId && x.userId == updateStatusDto.UserId);
             if (userjob == null)

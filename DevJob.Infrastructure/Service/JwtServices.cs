@@ -93,7 +93,7 @@ namespace DevJob.Infrastructure.Service
                 return new AuthResponse() { Message = "Invalid access token", Success = false };
             string? email = claimsPrincipal.FindFirstValue(ClaimTypes.Email);
             var user = await userManager.FindByEmailAsync(email);
-            if (user == null || user.RefreshToken != tokenModel.RefreshToken || user.RefreshTokenExpirationDate <= DateTime.Now)
+            if (user == null || user.RefreshToken != tokenModel.RefreshToken || user.RefreshTokenExpirationDate <= DateTime.UtcNow)
                 return new AuthResponse() { Success = false, Message = "Invalid refresh token" };
             //create token
             string newJwtToken = await CreateTokenAsync(user);

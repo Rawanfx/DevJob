@@ -18,7 +18,7 @@ using System.Text.Json.Nodes;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Web;
-using Google.Apis.Http;
+
 
 namespace DevJob.Infrastructure.Service
 {
@@ -689,6 +689,15 @@ namespace DevJob.Infrastructure.Service
                 Console.WriteLine(ex.Message);
                 throw;
             }
+        }
+        public async Task CleanUpOldJob()
+        {
+            var jobs = await unitOfWork.Jobs.Where(x => x.Local == false && x.IsActive == true &&
+            x.CreatedAt <= DateTime.UtcNow.AddMonths(-2))
+                .ToListAsync();
+            foreach (var i in jobs)
+                i.IsActive = false;
+            await unitOfWork.SaveChangesAsync();
         }
     }
 }

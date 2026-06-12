@@ -9,8 +9,9 @@ namespace DevJob.Application.ServiceContract
         Task CalculateMatchJobs();
         Task CalculateMatchingForNewJob(int jobId);
         Task PrepareRecommendedJobs(string user,int cvId);
-      //  Task CalculateMatchJobsWithoutAi();
-      //  Task PrepareWithoutAi(int user, int cvId);
+        //  Task CalculateMatchJobsWithoutAi();
+        //  Task PrepareWithoutAi(int user, int cvId);
+        Task CleanUpOldJob();
 
     }
 }

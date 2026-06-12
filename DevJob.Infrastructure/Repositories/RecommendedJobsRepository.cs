@@ -35,11 +35,12 @@ namespace DevJob.Infrastructure.Repositories
                    Location = x.Job1.Location,
                    MatchScore = x.MatchScore,
                    PostedAt = x.Job1.PostedAt,
-                   Title = x.Job1.Title
+                   Title = x.Job1.Title,
+                   Source = x.Job1.Source
                }
-               ).Distinct()
+               )
                .ToListAsync();
-            return recommendedJobs;
+            return recommendedJobs.DistinctBy(x=>x.Title).ToList();
         }
 
         public async Task<HashSet<string>> RecommendedJobs()

@@ -25,6 +25,10 @@ public static class HangfireJobsConfig
                     service => service.CalculateMatchJobs(),
                     Cron.HourInterval(12)
                 );
+                recurringJobManager.AddOrUpdate<IBackgroundService>(
+                    "Cleanup-old-jobs",
+                    x => x.CleanUpOldJob(),
+                    Cron.Daily);
             }
         }
     }

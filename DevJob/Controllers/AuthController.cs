@@ -121,6 +121,14 @@ namespace DevJob.API.Controllers
             var result = await authService.ResendConfirmationEmail(email);
             return Ok(result);
         }
+        [HttpGet("generate-access-token")]
+        public async Task<IActionResult>GenerateAccessToken(TokenModel tokenModel)
+        {
+            var result = await jwtServices.GenerateNewAccessToken(tokenModel);
+            if (result.Success)
+                return Ok(result);
+            return BadRequest(result);
+        }
 
     }
 }
