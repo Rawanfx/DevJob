@@ -4,6 +4,7 @@ using DevJob.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace DevJob.Infrastructure.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260612005948_addInterviewSession")]
+    partial class addInterviewSession
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -217,45 +220,40 @@ namespace DevJob.Infrastructure.Migrations
                     b.ToTable("convesations");
                 });
 
-            modelBuilder.Entity("DevJob.Domain.Entities.FaceAnalysisResult", b =>
+            modelBuilder.Entity("DevJob.Domain.Entities.InterviewSession", b =>
                 {
-                    b.Property<int>("Id")
+                    b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("AssessmentReport")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("CandidateId")
                         .HasColumnType("int");
 
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<float>("AvgEyeContact")
-                        .HasColumnType("real");
-
-                    b.Property<float>("AvgSmile")
-                        .HasColumnType("real");
-
-                    b.Property<string>("DominantEmotion")
+                    b.Property<string>("CreatedAt")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<string>("EmotionBreakdownJson")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<int>("MockInterviewQuestionId")
+                    b.Property<int>("InterviewStatus")
                         .HasColumnType("int");
 
-                    b.Property<string>("PerformanceOverTimeJson")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                    b.Property<int>("JobId")
+                        .HasColumnType("int");
 
-                    b.Property<string>("SuggestionsJson")
+                    b.Property<string>("LiveKitRoomName")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
                     b.HasKey("Id");
 
-                    b.HasIndex("MockInterviewQuestionId")
-                        .IsUnique();
+                    b.HasIndex("CandidateId");
 
-                    b.ToTable("FaceAnalyses");
+                    b.HasIndex("JobId");
+
+                    b.ToTable("InterviewSessions");
                 });
 
             modelBuilder.Entity("DevJob.Domain.Entities.Job", b =>
@@ -335,130 +333,6 @@ namespace DevJob.Infrastructure.Migrations
                     b.HasIndex("CompanyId");
 
                     b.ToTable("Jobs");
-                });
-
-            modelBuilder.Entity("DevJob.Domain.Entities.MockInterview", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<DateTime?>("CompletedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<int>("CvId")
-                        .HasColumnType("int");
-
-                    b.Property<int?>("JobId")
-                        .HasColumnType("int");
-
-                    b.Property<string>("Level")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<float?>("Score")
-                        .HasColumnType("real");
-
-                    b.Property<int>("Status")
-                        .HasColumnType("int");
-
-                    b.Property<string>("Track")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("UserId")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(450)");
-
-                    b.Property<string>("VideoUrl")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("CvId");
-
-                    b.HasIndex("JobId");
-
-                    b.HasIndex("UserId");
-
-                    b.ToTable("MockInterviews");
-                });
-
-            modelBuilder.Entity("DevJob.Domain.Entities.MockInterviewQuestion", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<string>("AIFeedback")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("Answer")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<int?>("AnsweredInSeconds")
-                        .HasColumnType("int");
-
-                    b.Property<string>("CorrectPoints")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<float?>("FinalAvgEyeContact")
-                        .HasColumnType("real");
-
-                    b.Property<string>("FinalDominantEmotion")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("FinalFeedBack")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<float?>("FinalScore")
-                        .HasColumnType("real");
-
-                    b.Property<float?>("FinalSpeechConfidence")
-                        .HasColumnType("real");
-
-                    b.Property<bool>("IsFollowUp")
-                        .HasColumnType("bit");
-
-                    b.Property<string>("MissingPoints")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<int>("MockInterviewId")
-                        .HasColumnType("int");
-
-                    b.Property<int>("OrderNumber")
-                        .HasColumnType("int");
-
-                    b.Property<float?>("OverallConfidence")
-                        .HasColumnType("real");
-
-                    b.Property<int?>("ParentQuestionId")
-                        .HasColumnType("int");
-
-                    b.Property<string>("Question")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("SuggestedAnswer")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<bool>("TimedOut")
-                        .HasColumnType("bit");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("MockInterviewId");
-
-                    b.HasIndex("ParentQuestionId");
-
-                    b.ToTable("MockInterviewQuestions");
                 });
 
             modelBuilder.Entity("DevJob.Domain.Entities.Notification", b =>
@@ -675,49 +549,6 @@ namespace DevJob.Infrastructure.Migrations
                     b.HasIndex("cvId");
 
                     b.ToTable("Skills");
-                });
-
-            modelBuilder.Entity("DevJob.Domain.Entities.SpeechAnalysisResult", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<float>("ClarityScore")
-                        .HasColumnType("real");
-
-                    b.Property<int>("MockInterviewQuestionId")
-                        .HasColumnType("int");
-
-                    b.Property<int>("PauseCount")
-                        .HasColumnType("int");
-
-                    b.Property<float>("SpeechConfidence")
-                        .HasColumnType("real");
-
-                    b.Property<string>("SpeechPace")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("SuggestionsJson")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("TranscribedText")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<float>("WordsPerMinute")
-                        .HasColumnType("real");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("MockInterviewQuestionId")
-                        .IsUnique();
-
-                    b.ToTable("SpeechAnalysisResults");
                 });
 
             modelBuilder.Entity("DevJob.Domain.Entities.UserCvData", b =>
@@ -1150,15 +981,23 @@ namespace DevJob.Infrastructure.Migrations
                     b.Navigation("UserCvData1");
                 });
 
-            modelBuilder.Entity("DevJob.Domain.Entities.FaceAnalysisResult", b =>
+            modelBuilder.Entity("DevJob.Domain.Entities.InterviewSession", b =>
                 {
-                    b.HasOne("DevJob.Domain.Entities.MockInterviewQuestion", "mockInterviewQuestion")
-                        .WithOne("FaceAnalysisResult")
-                        .HasForeignKey("DevJob.Domain.Entities.FaceAnalysisResult", "MockInterviewQuestionId")
+                    b.HasOne("DevJob.Domain.Entities.UserCvData", "User")
+                        .WithMany()
+                        .HasForeignKey("CandidateId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
-                    b.Navigation("mockInterviewQuestion");
+                    b.HasOne("DevJob.Domain.Entities.Job", "Job")
+                        .WithMany()
+                        .HasForeignKey("JobId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Job");
+
+                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("DevJob.Domain.Entities.Job", b =>
@@ -1169,50 +1008,6 @@ namespace DevJob.Infrastructure.Migrations
                         .OnDelete(DeleteBehavior.Restrict);
 
                     b.Navigation("companyProfile");
-                });
-
-            modelBuilder.Entity("DevJob.Domain.Entities.MockInterview", b =>
-                {
-                    b.HasOne("DevJob.Domain.Entities.CV", "CV")
-                        .WithMany()
-                        .HasForeignKey("CvId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.HasOne("DevJob.Domain.Entities.Job", "Job")
-                        .WithMany()
-                        .HasForeignKey("JobId")
-                        .OnDelete(DeleteBehavior.Restrict);
-
-                    b.HasOne("DevJob.Domain.Entities.ApplicationUser", "User")
-                        .WithMany()
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.Navigation("CV");
-
-                    b.Navigation("Job");
-
-                    b.Navigation("User");
-                });
-
-            modelBuilder.Entity("DevJob.Domain.Entities.MockInterviewQuestion", b =>
-                {
-                    b.HasOne("DevJob.Domain.Entities.MockInterview", "MockInterview")
-                        .WithMany("Questions")
-                        .HasForeignKey("MockInterviewId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.HasOne("DevJob.Domain.Entities.MockInterviewQuestion", "ParentQuestion")
-                        .WithMany()
-                        .HasForeignKey("ParentQuestionId")
-                        .OnDelete(DeleteBehavior.Restrict);
-
-                    b.Navigation("MockInterview");
-
-                    b.Navigation("ParentQuestion");
                 });
 
             modelBuilder.Entity("DevJob.Domain.Entities.Notification", b =>
@@ -1359,17 +1154,6 @@ namespace DevJob.Infrastructure.Migrations
                         .OnDelete(DeleteBehavior.Cascade);
 
                     b.Navigation("CV");
-                });
-
-            modelBuilder.Entity("DevJob.Domain.Entities.SpeechAnalysisResult", b =>
-                {
-                    b.HasOne("DevJob.Domain.Entities.MockInterviewQuestion", "MockInterviewQuestion")
-                        .WithOne("SpeechAnalysisResult")
-                        .HasForeignKey("DevJob.Domain.Entities.SpeechAnalysisResult", "MockInterviewQuestionId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.Navigation("MockInterviewQuestion");
                 });
 
             modelBuilder.Entity("DevJob.Domain.Entities.UserCvData", b =>
@@ -1584,20 +1368,6 @@ namespace DevJob.Infrastructure.Migrations
                     b.Navigation("RequiredSkills");
 
                     b.Navigation("UserJobs");
-                });
-
-            modelBuilder.Entity("DevJob.Domain.Entities.MockInterview", b =>
-                {
-                    b.Navigation("Questions");
-                });
-
-            modelBuilder.Entity("DevJob.Domain.Entities.MockInterviewQuestion", b =>
-                {
-                    b.Navigation("FaceAnalysisResult")
-                        .IsRequired();
-
-                    b.Navigation("SpeechAnalysisResult")
-                        .IsRequired();
                 });
 
             modelBuilder.Entity("DevJob.Domain.Entities.Projects", b =>

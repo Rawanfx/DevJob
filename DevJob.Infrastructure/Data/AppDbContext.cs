@@ -12,6 +12,10 @@ namespace DevJob.Infrastructure.Data
         {
 
         }
+        public DbSet<MockInterview>MockInterviews { get; set; }
+        public DbSet<MockInterviewQuestion> MockInterviewQuestions { get; set; }
+        public DbSet<FaceAnalysisResult> FaceAnalyses { get; set; }
+        public DbSet<SpeechAnalysisResult> SpeechAnalysisResults { get; set; }
         public DbSet<SavedJobs> SavedJobs { get; set; }
         public DbSet<Conversation> convesations { get; set; }
       

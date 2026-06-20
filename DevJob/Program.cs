@@ -1,9 +1,12 @@
+using Amazon.Runtime;
+using Amazon.S3;
 using DevJob.API.Middleware;
+using DevJob.Application.Configurations;
 using DevJob.Application.DTOs.Auth;
-using DevJob.Domain.Entities;
 using DevJob.Application.Repository_Contract;
 using DevJob.Application.ServiceContract;
 using DevJob.Application.Validation;
+using DevJob.Domain.Entities;
 using DevJob.Infrastructure.Data;
 using DevJob.Infrastructure.Hubs;
 using DevJob.Infrastructure.Repositories;
@@ -14,6 +17,7 @@ using Hangfire;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.IdentityModel.Tokens;
 using Serilog;
 using System.Net.WebSockets;
@@ -24,6 +28,17 @@ Log.Logger = new LoggerConfiguration()
     .ReadFrom.Configuration(builder.Configuration)
     .CreateLogger();
 // Add services to the container.
+
+var minioSection = builder.Configuration.GetSection("MinIO");
+
+var s3Config = new AmazonS3Config
+{
+    ServiceURL = "https://s3.us-east-005.backblazeb2.com",
+    ForcePathStyle = true
+};
+builder.Services.AddSingleton<IAmazonS3>(sp =>
+    new AmazonS3Client(minioSection["AccessKey"], minioSection["SecretKey"], s3Config));
+
 
 builder.Services.AddControllers()
     .AddJsonOptions(opt => opt.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter()));
@@ -38,6 +53,7 @@ builder.Services.AddDbContext<AppDbContext>(
     }
 
     );
+builder.Services.Configure<GeminiConfig>(builder.Configuration.GetSection("GeminiSetting"));
 Console.WriteLine(builder.Configuration["cs"]);
 builder.Services.AddIdentity<ApplicationUser, IdentityRole>(x => x.SignIn.RequireConfirmedAccount = true)
     .AddEntityFrameworkStores<AppDbContext>()
@@ -47,6 +63,7 @@ builder.Services.AddHangfire(config =>
     config.UseRecommendedSerializerSettings()
     .UseSqlServerStorage(builder.Configuration["hangfireCs"]);
 });
+
 builder.Services.AddHangfireServer();
 builder.Services.AddScoped<IChatServices, ChatServices>();
 //Repo Layer
@@ -72,8 +89,11 @@ builder.Services.AddHttpClient();
 builder.Services.AddScoped<IUploadToAzure, UploadToAzure>();
 builder.Services.AddScoped<ICVServices, CvServices>();
 builder.Services.AddScoped<INotificationService, NotificationService>();
+builder.Services.AddScoped<IGeminiService, GeminiService>();
+builder.Services.AddScoped<IStorageService, BackBlazeService>();
 builder.Services.AddScoped<SkillsService>();
 builder.Services.AddTransient<IValidator<CompanyRegisterDTO>, RegisterValidation>();
+builder.Services.AddScoped<IMockInterviewService, MockInterviewService>();
 //builder.Services.AddFluentValidationAutoValidation();
 builder.Services.AddValidatorsFromAssemblyContaining<RegisterValidation>();
 builder.Services.AddValidatorsFromAssemblyContaining<JobValidation>();

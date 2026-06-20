@@ -4,6 +4,7 @@ using DevJob.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace DevJob.Infrastructure.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260615123951_MockInterview")]
+    partial class MockInterview
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -357,11 +360,15 @@ namespace DevJob.Infrastructure.Migrations
                     b.Property<int?>("JobId")
                         .HasColumnType("int");
 
+                    b.Property<string>("JobTitle")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<string>("Level")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<float?>("Score")
+                    b.Property<float>("Score")
                         .HasColumnType("real");
 
                     b.Property<int>("Status")
@@ -374,9 +381,6 @@ namespace DevJob.Infrastructure.Migrations
                     b.Property<string>("UserId")
                         .IsRequired()
                         .HasColumnType("nvarchar(450)");
-
-                    b.Property<string>("VideoUrl")
-                        .HasColumnType("nvarchar(max)");
 
                     b.HasKey("Id");
 
@@ -398,37 +402,35 @@ namespace DevJob.Infrastructure.Migrations
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
                     b.Property<string>("AIFeedback")
+                        .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("Answer")
+                        .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<int?>("AnsweredInSeconds")
                         .HasColumnType("int");
 
-                    b.Property<string>("CorrectPoints")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<float?>("FinalAvgEyeContact")
+                    b.Property<float>("FinalAvgEyeContact")
                         .HasColumnType("real");
 
                     b.Property<string>("FinalDominantEmotion")
+                        .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("FinalFeedBack")
+                        .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<float?>("FinalScore")
+                    b.Property<float>("FinalScore")
                         .HasColumnType("real");
 
-                    b.Property<float?>("FinalSpeechConfidence")
+                    b.Property<float>("FinalSpeechConfidence")
                         .HasColumnType("real");
 
                     b.Property<bool>("IsFollowUp")
                         .HasColumnType("bit");
-
-                    b.Property<string>("MissingPoints")
-                        .HasColumnType("nvarchar(max)");
 
                     b.Property<int>("MockInterviewId")
                         .HasColumnType("int");
@@ -444,9 +446,6 @@ namespace DevJob.Infrastructure.Migrations
 
                     b.Property<string>("Question")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("SuggestedAnswer")
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<bool>("TimedOut")

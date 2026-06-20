@@ -27,5 +27,9 @@ namespace DevJob.Application.ServiceContract
         IRepository<UserProfile> UserProfile{ get; }
         IUserSkillsRepository UserSkills { get; }
         IUserJobRepository UserJob { get; }
+        IRepository<MockInterview> MockInterview { get; }
+        IRepository<SpeechAnalysisResult> SpeechAnalysisResult { get; }
+        IRepository<FaceAnalysisResult> FaceAnalysisResult { get; }
+        IRepository<MockInterviewQuestion> MockInterviewQuestion { get; }
     }
 }
