@@ -28,5 +28,9 @@ namespace DevJob.Application.ServiceContract
             List<QuestionAnswerPair> questionsAndAnswers,
             float overallScore,
             FaceSpeechSummary bodyLanguageSummary = null);
+        Task<GroqReportResult> GenerateInterviewReportAsync(
+    List<QuestionAnalysisSnapshot> snapshots,
+    string jobTitle,
+    CancellationToken cancellationToken = default);
     }
 }

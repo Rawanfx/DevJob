@@ -18,7 +18,7 @@ namespace DevJob.Infrastructure.Data
         public DbSet<SpeechAnalysisResult> SpeechAnalysisResults { get; set; }
         public DbSet<SavedJobs> SavedJobs { get; set; }
         public DbSet<Conversation> convesations { get; set; }
-      
+      public DbSet<InterviewVideo> InterviewVideos { get; set; }
        public DbSet<chats> Chats { get; set; }
         public DbSet<Notification> Notifications { get; set; }
        public DbSet<CompanyProfile> Company { get; set; }
@@ -38,6 +38,8 @@ namespace DevJob.Infrastructure.Data
         public DbSet<UserPreferenceـJobs> UserPreferenceـJobs { get; set; }
         public DbSet<UserPrefernce_Skills> UserPrefernce_Skills { get; set; }
         public DbSet<UserPreference> userPreferences { get; set; }
+        public DbSet<ToneAnalysisResult> ToneAnalysisResult { get; set; }
+        public DbSet<MockInterviewReport> MockInterviewReport { get; set; }
         protected override void OnModelCreating(ModelBuilder builder)
         {
             const string id1 = "fba5305e-4f8f-4317-870f-89c909d74049";

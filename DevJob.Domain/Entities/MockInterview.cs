@@ -21,7 +21,6 @@ namespace DevJob.Domain.Entities
         public float? Score { get; set; }
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
         public DateTime? CompletedAt { get; set; }
-        public string? VideoUrl { get; set; }
         public ApplicationUser User { get; set; }
         public CV CV { get; set; }
         public Job Job { get; set; }

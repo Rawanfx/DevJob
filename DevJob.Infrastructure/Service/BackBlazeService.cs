@@ -2,6 +2,7 @@
 using Amazon.S3.Model;
 using DevJob.Application.ServiceContract;
 using Microsoft.Extensions.Configuration;
+
 namespace DevJob.Infrastructure.Service
 {
     public class BackBlazeService : IStorageService
@@ -13,6 +14,20 @@ namespace DevJob.Infrastructure.Service
         {
             _s3Client = s3Client;
             _bucketName = configuration["MinIO:BucketName"];
+        }
+
+        public async Task<bool> DoesFileExistsAsync(string objectKey)
+        {
+            try
+            {
+                var metadata = await _s3Client.GetObjectMetadataAsync(_bucketName, objectKey);
+                return metadata != null && metadata.ContentLength > 0;
+            }
+            catch(Exception ex)
+            {
+                return false;
+                throw;
+            }
         }
 
         public string GeneratePresignedUploadUrl(string objectKey)
@@ -29,14 +44,13 @@ namespace DevJob.Infrastructure.Service
 
         public string GetCleanVideoUrl(string objectKey)
         {
-            var url = _s3Client.GetPreSignedURL(new GetPreSignedUrlRequest
+            return _s3Client.GetPreSignedURL(new GetPreSignedUrlRequest
             {
                 BucketName = _bucketName,
                 Key = objectKey,
                 Verb = HttpVerb.GET,
-                Expires = DateTime.UtcNow.AddDays(7)
+                Expires = DateTime.UtcNow.AddMinutes(30)
             });
-            return url.Split('?')[0];
         }
     }
 }

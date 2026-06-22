@@ -22,5 +22,13 @@ namespace DevJob.API.Controllers
             return Ok(result);
 
         }
+        [HttpPost ("confirm-upload/{videoId}")]
+        public async Task<IActionResult>ConfirmUpload (string videoId)
+        {
+            var result = await mockInterviewService.ConfirmUpload(videoId);
+            if (!result.Success)
+                return BadRequest(result);
+            return Ok(result);
+        }
     }
 }

@@ -1,5 +1,6 @@
 using Amazon.Runtime;
 using Amazon.S3;
+using DevJob.API;
 using DevJob.API.Middleware;
 using DevJob.Application.Configurations;
 using DevJob.Application.DTOs.Auth;
@@ -11,6 +12,7 @@ using DevJob.Infrastructure.Data;
 using DevJob.Infrastructure.Hubs;
 using DevJob.Infrastructure.Repositories;
 using DevJob.Infrastructure.Service;
+using DevJob.Infrastructure.Settings;
 using DevJob.Infrastructure.Validation;
 using FluentValidation;
 using Hangfire;
@@ -38,7 +40,7 @@ var s3Config = new AmazonS3Config
 };
 builder.Services.AddSingleton<IAmazonS3>(sp =>
     new AmazonS3Client(minioSection["AccessKey"], minioSection["SecretKey"], s3Config));
-
+builder.Services.Configure<FastApiSettings>(builder.Configuration.GetSection("FastApi"));
 
 builder.Services.AddControllers()
     .AddJsonOptions(opt => opt.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter()));
@@ -94,14 +96,17 @@ builder.Services.AddScoped<IStorageService, BackBlazeService>();
 builder.Services.AddScoped<SkillsService>();
 builder.Services.AddTransient<IValidator<CompanyRegisterDTO>, RegisterValidation>();
 builder.Services.AddScoped<IMockInterviewService, MockInterviewService>();
+builder.Services.AddScoped<IQuickTranscriptionService, QuickTranscriptionService>();
+builder.Services.AddScoped<IInterviewProcessService, InterviewProcessService>();
 //builder.Services.AddFluentValidationAutoValidation();
 builder.Services.AddValidatorsFromAssemblyContaining<RegisterValidation>();
 builder.Services.AddValidatorsFromAssemblyContaining<JobValidation>();
 builder.Services.AddValidatorsFromAssemblyContaining<UpdateCompanyDataValidation>();
 builder.Services.AddValidatorsFromAssemblyContaining<UpdateProfileValidation>();
 builder.Services.AddValidatorsFromAssemblyContaining<UploadLogoValidate>();
+builder.Services.AddScoped<IInterviewReportService, InterviewReportService>();
 builder.Services.AddSignalR();
-
+builder.Services.AddHostedService<PollingInterviewProcessingWorker>();
 builder.Services.Configure<MailSetting>(builder.Configuration.GetSection("MailSetting"));
 //builder.Services.AddAuthentication()
 //    .AddGoogle

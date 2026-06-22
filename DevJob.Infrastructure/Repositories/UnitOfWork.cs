@@ -32,9 +32,12 @@ namespace DevJob.Infrastructure.Repositories
             UserSkills = new UserSkillRepository(context);
             UserJob = new UserJobRepository(context);
             MockInterview = new RepositoryGeneric<MockInterview>(context);
-            MockInterviewQuestion = new RepositoryGeneric<MockInterviewQuestion>(context);
+            MockInterviewQuestion = new MockInteviewQuestionRepository(context);
             SpeechAnalysisResult = new RepositoryGeneric<SpeechAnalysisResult>(context);
             FaceAnalysisResult = new RepositoryGeneric<FaceAnalysisResult>(context);
+            InterviewVideo = new InterviewVideoRepository(context);
+            ToneAnalysisResult = new RepositoryGeneric<ToneAnalysisResult>(context);
+            MockInterviewReport = new RepositoryGeneric<MockInterviewReport>(context);
         }
         public IChatRepository Chats { get; }
         public ICompanyRepository CompanyProfile { get; }
@@ -55,13 +58,17 @@ namespace DevJob.Infrastructure.Repositories
         public IUserSkillsRepository UserSkills { get; }
         public IUserJobRepository UserJob { get; }
 
+        public IInterviewVideoRepository InterviewVideo { get; }
+
         public IRepository<MockInterview> MockInterview { get; }
 
         public IRepository<SpeechAnalysisResult> SpeechAnalysisResult { get; }
 
         public IRepository<FaceAnalysisResult> FaceAnalysisResult { get; }
+        public IRepository<ToneAnalysisResult> ToneAnalysisResult { get; }
 
-        public IRepository<MockInterviewQuestion> MockInterviewQuestion { get; }
+        public IMockInterviewQuestionRepository MockInterviewQuestion { get; }
+       public IRepository<MockInterviewReport> MockInterviewReport { get ; }
 
         public async Task BeginTransaction()=>
            transaction= await context.Database.BeginTransactionAsync();

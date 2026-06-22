@@ -30,6 +30,9 @@ namespace DevJob.Application.ServiceContract
         IRepository<MockInterview> MockInterview { get; }
         IRepository<SpeechAnalysisResult> SpeechAnalysisResult { get; }
         IRepository<FaceAnalysisResult> FaceAnalysisResult { get; }
-        IRepository<MockInterviewQuestion> MockInterviewQuestion { get; }
+        IMockInterviewQuestionRepository MockInterviewQuestion  { get; }
+        IInterviewVideoRepository InterviewVideo { get; }
+        IRepository<ToneAnalysisResult> ToneAnalysisResult { get; }
+        IRepository<MockInterviewReport> MockInterviewReport { get;  }
     }
 }

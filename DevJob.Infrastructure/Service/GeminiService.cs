@@ -7,16 +7,17 @@ using OpenAI;
 using OpenAI.Chat;
 using Serilog;
 using System.ClientModel;
+using System.Text;
 using System.Text.Json;
 
 namespace DevJob.Infrastructure.Service
 {
-    public class GeminiService:IGeminiService
+    public class GeminiService : IGeminiService
     {
         private readonly IConfiguration configuration;
 
         private readonly ChatClient chat;
-        public GeminiService (IConfiguration configuration)
+        public GeminiService(IConfiguration configuration)
         {
             this.configuration = configuration;
             string apiKey = configuration["Groq:ApiKey"];
@@ -25,7 +26,7 @@ namespace DevJob.Infrastructure.Service
                 Endpoint = new Uri("https://api.groq.com/openai/v1")
             };
             var openAiClient = new OpenAIClient(new ApiKeyCredential(apiKey), groqOptions);
-            chat = openAiClient.GetChatClient( model: "llama-3.3-70b-versatile"
+            chat = openAiClient.GetChatClient(model: "llama-3.3-70b-versatile"
            );
         }
 
@@ -77,16 +78,6 @@ Return ONLY a valid JSON object, nothing else:
             }
             catch (Exception ex)
             {
-               
-                // ✅ Fallback — متوقفيش الـ Interview لو Gemini فشل
-                return new AnswerEvaluation
-                {
-                    Score = 5,
-                    Feedback = "Unable to evaluate this answer automatically.",
-                    Correct_Points = "",
-                    Missing_Points = "",
-                    Suggested_Answer = ""
-                };
                 throw new Exception(ex.Message);
             }
         }
@@ -198,7 +189,7 @@ Example format:
             }
             catch (Exception ex)
             {
-             
+
                 throw new Exception($"Failed to generate questions: {ex.Message}");
             }
         }
@@ -277,5 +268,113 @@ know this topic), return:
 
             return response.Trim();
         }
+        public async Task<GroqReportResult> GenerateInterviewReportAsync(
+    List<QuestionAnalysisSnapshot> snapshots,
+    string jobTitle,
+    CancellationToken cancellationToken = default)
+        {
+            var prompt = _buildReportPrompt(snapshots, jobTitle);
+
+            var response = await chat.CompleteChatAsync(prompt);
+            var raw = CleanJsonResponse(response.Value.Content[0].Text);
+
+            return _parseReportJson(raw);
+        }
+
+        private static string _buildReportPrompt(
+            List<QuestionAnalysisSnapshot> snapshots,
+            string jobTitle)
+        {
+            var sb = new StringBuilder();
+            sb.AppendLine("You are an expert interview coach generating a final report.");
+            sb.AppendLine($"Job Title: {jobTitle}");
+            sb.AppendLine($"Total Questions: {snapshots.Count}");
+            sb.AppendLine();
+            sb.AppendLine("=== PER-QUESTION BREAKDOWN ===");
+
+            for (int i = 0; i < snapshots.Count; i++)
+            {
+                var q = snapshots[i];
+                sb.AppendLine($"\n[Question {i + 1}]");
+                sb.AppendLine($"Q: {q.Question}");
+                sb.AppendLine($"A: {Truncate(q.Answer, 400)}");
+                sb.AppendLine($"Score: {q.FinalScore}/10");
+
+                if (!string.IsNullOrEmpty(q.CorrectPoints))
+                    sb.AppendLine($"Correct Points: {q.CorrectPoints}");
+                if (!string.IsNullOrEmpty(q.MissingPoints))
+                    sb.AppendLine($"Missing Points: {q.MissingPoints}");
+
+                if (q.WordsPerMinute.HasValue)
+                    sb.AppendLine($"Speech: {q.WordsPerMinute} WPM | " +
+                                  $"Pace: {q.SpeechPace} | " +
+                                  $"Clarity: {q.ClarityScore}/100 | " +
+                                  $"Pauses: {q.PauseCount}");
+
+                if (!string.IsNullOrEmpty(q.DominantEmotion))
+                    sb.AppendLine($"Tone: {q.DominantEmotion} | " +
+                                  $"Strain: {q.StrainScore}/100");
+
+                if (q.AvgEyeContactPct.HasValue)
+                    sb.AppendLine($"Body Language: " +
+                                  $"Eye Contact: {q.AvgEyeContactPct:F1}% | " +
+                                  $"Poor Posture: {q.PoorPostureWindowPct:F1}% | " +
+                                  $"Brow Tension: {q.BrowTensionScore:F2} | " +
+                                  $"Blink Rate: {q.BlinkRatePerMinute:F1}/min | " +
+                                  $"Head Movement: {q.DominantHeadMovementType}");
+            }
+            var avgScore = snapshots
+    .Where(s => s.FinalScore.HasValue)
+    .Average(s => s.FinalScore!.Value);
+            sb.AppendLine();
+            sb.AppendLine("=== INSTRUCTIONS ===");
+            sb.AppendLine("""
+Return ONLY a valid JSON object with EXACTLY these keys:
+{
+  "overall_score": <must be close to {avgScore:F1}, adjusted for communication>,
+  "communication_score": <0-10>,
+  "confidence_score": <0-10>,
+  "body_language_score": <0-10>,
+  "emotional_profile": "<2-3 sentences>",
+  "speech_profile": "<2-3 sentences>",
+  "body_language_summary": "<2-3 sentences>",
+  "strengths": ["<strength>", "<strength>", "<strength>"],
+  "areas_for_improvement": ["<area>", "<area>", "<area>"],
+  "recommendations": ["<tip>", "<tip>", "<tip>"]
+}
+No markdown, no preamble.
+""");
+
+            return sb.ToString();
+        }
+
+        private static GroqReportResult _parseReportJson(string raw)
+        {
+            using var doc = JsonDocument.Parse(raw);
+            var root = doc.RootElement;
+
+            return new GroqReportResult
+            {
+                OverallScore = root.GetProperty("overall_score").GetSingle(),
+                CommunicationScore = root.GetProperty("communication_score").GetSingle(),
+                ConfidenceScore = root.GetProperty("confidence_score").GetSingle(),
+                BodyLanguageScore = root.GetProperty("body_language_score").GetSingle(),
+                EmotionalProfile = root.GetProperty("emotional_profile").GetString() ?? "",
+                SpeechProfile = root.GetProperty("speech_profile").GetString() ?? "",
+                BodyLanguageSummary = root.GetProperty("body_language_summary").GetString() ?? "",
+                Strengths = root.GetProperty("strengths")
+                    .EnumerateArray()
+                    .Select(x => x.GetString() ?? "").ToList(),
+                AreasForImprovement = root.GetProperty("areas_for_improvement")
+                    .EnumerateArray()
+                    .Select(x => x.GetString() ?? "").ToList(),
+                Recommendations = root.GetProperty("recommendations")
+                    .EnumerateArray()
+                    .Select(x => x.GetString() ?? "").ToList(),
+            };
+        }
+
+        private static string Truncate(string text, int maxLength) =>
+            text.Length <= maxLength ? text : text[..maxLength] + "...";
     }
 }

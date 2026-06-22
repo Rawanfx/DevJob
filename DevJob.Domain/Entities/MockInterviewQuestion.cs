@@ -30,5 +30,6 @@ namespace DevJob.Domain.Entities
         public MockInterviewQuestion ParentQuestion { get; set; }
         public FaceAnalysisResult FaceAnalysisResult { get; set; }
         public SpeechAnalysisResult SpeechAnalysisResult { get; set; }
+        public ToneAnalysisResult ToneAnalysisResult { get; set; }
     }
 }

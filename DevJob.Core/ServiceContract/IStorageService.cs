@@ -7,5 +7,6 @@ namespace DevJob.Application.ServiceContract
     {
         string GetCleanVideoUrl(string objectKey);
         string GeneratePresignedUploadUrl(string objectKey);
+        Task<bool> DoesFileExistsAsync(string objectKey);
     }
 }

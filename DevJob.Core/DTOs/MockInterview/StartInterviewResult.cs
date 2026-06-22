@@ -7,6 +7,7 @@
         public int InterviewId { get; set; }
         public int TimerSeconds { get; set; }
         public string Upload { get; set; }
+        public string VideoId { get; set; }
         public QuestionDto FirstQuestion { get; set; }
     }
 }
