@@ -15,5 +15,6 @@ namespace DevJob.Application.ServiceContract
         void Update(T entity);
         void Remove(T entity);
         Task<bool> AnyAsync(Expression<Func<T, bool>> del);
+        Task<int> CountAsync(Expression<Func<T, bool>> predicate);
     }
 }

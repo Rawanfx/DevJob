@@ -40,5 +40,8 @@ namespace DevJob.Infrastructure.Repositories
             dbSet.Update(entity);
         public IQueryable<T> Where(Expression<Func<T, bool>> del) =>
         dbSet.Where(del);
+        public async Task<int> CountAsync(Expression<Func<T, bool>> predicate)=>
+             await context.Set<T>().CountAsync(predicate);
+        
     }
 }

@@ -29,20 +29,20 @@ namespace DevJob.Infrastructure.Service
             var video = await unitOfWork.InterviewVideo.FirstOrDefaultAsync(v => v.Id == videoId);
             if (video is null) return;
 
-            video.Status = VideoStatus.Processing;
-            await unitOfWork.SaveChangesAsync();
 
             try
             {
+            video.Status = VideoStatus.Processing;
+            await unitOfWork.SaveChangesAsync();
                 var question = await unitOfWork.MockInterviewQuestion
                     .FirstOrDefaultAsync(q => q.Id == video.QuestionId);
                 if (question is null) throw new Exception($"Question {video.QuestionId} not found.");
 
-                var cleanUrl = storageService.GetCleanVideoUrl(video.StorageKey);
+                var cleanUrl = storageService.GetCleanVideoUrl(video.Id.ToString());
 
                 var response = await httpClient.PostAsJsonAsync(
                     $"{fastApiBaseUrl}/analyze",
-                    new { videoUrl = cleanUrl, questionId = video.QuestionId },
+                    new { videoUrl = cleanUrl },
                     cancellationToken);
 
                 response.EnsureSuccessStatusCode();

@@ -20,6 +20,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using Serilog;
 using System.Net.WebSockets;
@@ -56,10 +57,22 @@ builder.Services.AddDbContext<AppDbContext>(
 
     );
 builder.Services.Configure<GeminiConfig>(builder.Configuration.GetSection("GeminiSetting"));
+
 Console.WriteLine(builder.Configuration["cs"]);
-builder.Services.AddIdentity<ApplicationUser, IdentityRole>(x => x.SignIn.RequireConfirmedAccount = true)
+builder.Services.AddIdentity<ApplicationUser, IdentityRole>(x => {
+    x.SignIn.RequireConfirmedAccount = true;
+    x.Password.RequireDigit = true;
+    x.Password.RequireLowercase = true;
+    x.Password.RequireUppercase = true;
+    x.Password.RequiredUniqueChars = 2;
+    x.Password.RequiredLength = 8;
+
+    x.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(5);
+    x.Lockout.MaxFailedAccessAttempts = 5;
+})
     .AddEntityFrameworkStores<AppDbContext>()
     .AddDefaultTokenProviders();
+
 builder.Services.AddHangfire(config =>
 {
     config.UseRecommendedSerializerSettings()
@@ -107,6 +120,10 @@ builder.Services.AddValidatorsFromAssemblyContaining<UploadLogoValidate>();
 builder.Services.AddScoped<IInterviewReportService, InterviewReportService>();
 builder.Services.AddSignalR();
 builder.Services.AddHostedService<PollingInterviewProcessingWorker>();
+builder.Services.AddHttpClient<IInterviewProcessService, InterviewProcessService>(client =>
+{
+    client.Timeout = TimeSpan.FromMinutes(5); 
+});
 builder.Services.Configure<MailSetting>(builder.Configuration.GetSection("MailSetting"));
 //builder.Services.AddAuthentication()
 //    .AddGoogle

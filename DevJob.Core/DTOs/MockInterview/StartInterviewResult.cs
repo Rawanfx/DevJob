@@ -8,6 +8,6 @@
         public int TimerSeconds { get; set; }
         public string Upload { get; set; }
         public string VideoId { get; set; }
-        public QuestionDto FirstQuestion { get; set; }
+        public List< QuestionDto> Questions { get; set; }
     }
 }

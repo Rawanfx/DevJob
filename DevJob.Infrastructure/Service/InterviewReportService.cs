@@ -20,12 +20,12 @@ namespace DevJob.Infrastructure.Service
         }
 
         public async Task<MockInterviewReportDto> GenerateReportAsync(
-            int mockInterviewId,
+            int mockInterviewId,string userid,
             CancellationToken cancellationToken = default)
         {
             // ── 1. Load interview ─────────────────────────────────────────────
             var interview = await _unitOfWork.MockInterview
-                .FirstOrDefaultAsync(i => i.Id == mockInterviewId)
+                .FirstOrDefaultAsync(i => i.Id == mockInterviewId && i.UserId==userid)
                 ?? throw new InvalidOperationException("Interview not found.");
 
             // ── 2. Load all answered questions (main + follow-ups) ────────────

@@ -2,6 +2,7 @@
 using DevJob.Application.ServiceContract;
 using DevJob.Domain.Entities;
 using DevJob.Domain.Enums;
+using Microsoft.EntityFrameworkCore;
 using Mscc.GenerativeAI.Types;
 
 namespace DevJob.Infrastructure.Service
@@ -78,6 +79,8 @@ namespace DevJob.Infrastructure.Service
                     }).ToList();
 
                 await unitOfWork.MockInterviewQuestion.AddRangeAsync(interviewQuestions);
+
+                await unitOfWork.SaveChangesAsync();
                 var objectKey = Guid.NewGuid();
                 var storageKey = $"videos/{objectKey}.mp4";
                 var interviewVideo = new InterviewVideo
@@ -90,24 +93,32 @@ namespace DevJob.Infrastructure.Service
                 var uploadUrl = storageService.GeneratePresignedUploadUrl(objectKey.ToString());
 
                 await unitOfWork.SaveChangesAsync();
-                await unitOfWork.SaveChangesAsync();
                 await unitOfWork.CommitAsync();
 
                 var firstQuestion = interviewQuestions[0];
-
+                var questionsR = await unitOfWork.MockInterviewQuestion.Where(x => x.MockInterviewId == interview.Id)
+                    .Select(x => new 
+                    {
+                        x.Id,
+                        x.Question,
+                    }).ToListAsync();
+                List<QuestionDto> questionDtoList = new List<QuestionDto>();
+                foreach (var i in questionsR)
+                {
+                    questionDtoList.Add(new QuestionDto()
+                    {
+                        QuestionId = i.Id,
+                        IsFollowUp = false,
+                        Question = i.Question,
+                        QuestionNumber = i.Id - firstQuestion.Id + 1
+                    });
+                }
                 return new StartInterviewResult
                 {
                     Success = true,
                     InterviewId = interview.Id,
                     Upload = uploadUrl,
-                    FirstQuestion = new QuestionDto
-                    {
-                        QuestionId = firstQuestion.Id,
-                        Question = firstQuestion.Question,
-                        QuestionNumber = 1,
-                        TotalQuestions = interviewQuestions.Count,
-                        IsFollowUp = false
-                    },
+                    Questions = questionDtoList,
                     VideoId = interviewVideo.Id.ToString()
                 };
             }
@@ -126,7 +137,7 @@ namespace DevJob.Infrastructure.Service
                 return new ConfirmUploadVideoResult() { Success=false,Message ="Vidoe not found"};
             if (video.Status != VideoStatus.PendingUpload)
                 return new ConfirmUploadVideoResult() { Success = false };
-            var foundInB2 = await storageService.DoesFileExistsAsync(video.StorageKey);
+            var foundInB2 = await storageService.DoesFileExistsAsync(video.Id.ToString());
             if (foundInB2==false)
                 return new ConfirmUploadVideoResult
                 {
@@ -148,7 +159,7 @@ namespace DevJob.Infrastructure.Service
             if (video == null)
                 throw new Exception("Video not found");
 
-            var uploadExists = await storageService.DoesFileExistsAsync(video.StorageKey);
+            var uploadExists = await storageService.DoesFileExistsAsync(video.Id.ToString());
             if (!uploadExists)
                 throw new Exception("Video not found in storage");
 
@@ -159,6 +170,11 @@ namespace DevJob.Infrastructure.Service
             var interview = await unitOfWork.MockInterview.FirstOrDefaultAsync(i => i.Id == question.MockInterviewId);
             if (interview is null)
                 return new SubmitAnswerResult { Success = false, Message = "Associated interview not found." };
+
+            var answeredQuestionsCount = await unitOfWork.InterviewVideo
+             .CountAsync(v => v.MockInterviewQuestion.MockInterviewId == interview.Id );
+            if (answeredQuestionsCount >= 7)
+                return new SubmitAnswerResult() { Success = true, Message = "End of Questions" };
             await unitOfWork.BeginTransaction();
             try
             {
@@ -166,7 +182,7 @@ namespace DevJob.Infrastructure.Service
                 video.Status = VideoStatus.Processing;
                 video.UpdatedAt = DateTimeOffset.UtcNow;
 
-                var transcribedText = await quickTranscriptionService.TranscribeQuickAsync(video.StorageKey);
+                var transcribedText = await quickTranscriptionService.TranscribeQuickAsync(video.Id.ToString());
 
                 // ── 4) Context for scoring / follow-up ─────────────────
                 var userId = await unitOfWork.UserCvData.FirstOrDefaultAsync(x => x.UserId == userid && x.cvId == interview.CvId);
@@ -205,6 +221,7 @@ namespace DevJob.Infrastructure.Service
                         IsFollowUp = true,
                         ParentQuestionId = question.Id,
                         AIFeedback = followUp.Reason,
+                        
                     };
                     await unitOfWork.MockInterviewQuestion.AddAsync(nextQuestion);
                 }
@@ -225,7 +242,7 @@ namespace DevJob.Infrastructure.Service
                         .GetNextMainQuestionAsync(question.MockInterviewId, rootOrderNumber);
                 }
 
-                if (nextQuestion is null)
+                if (nextQuestion is null || answeredQuestionsCount ==7)
                 {
                     interview.Status = InterviewStatus.Completed;
                 }
@@ -246,6 +263,7 @@ namespace DevJob.Infrastructure.Service
                             QuestionId = nextQuestion.Id,
                             Question = nextQuestion.Question,
                             IsFollowUp = nextQuestion.IsFollowUp,
+                          //  TotalQuestions= answeredQuestionsCount,
                         },
                 };
             }

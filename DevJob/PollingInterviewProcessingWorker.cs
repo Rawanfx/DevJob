@@ -54,7 +54,6 @@ namespace DevJob.API
                     logger.LogError(ex, "Failed to process interview video {VideoId}.", video.Id);
                     video.Status = VideoStatus.Failed;
                     video.ErrorMessage = ex.Message;
-                    await unitOfWork.InterviewVideo.UpdateAsync(video);
                     await unitOfWork.SaveChangesAsync();
                 }
             }
