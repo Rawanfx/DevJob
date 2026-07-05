@@ -1,6 +1,7 @@
 ﻿using DevJob.Application.Repository_Contract;
 using DevJob.Domain.Entities;
 using DevJob.Infrastructure.Data;
+using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -16,13 +17,13 @@ namespace DevJob.Infrastructure.Repositories
         {
             this.context = context;
         }
-        public  Task<MockInterviewQuestion?> GetNextMainQuestionAsync(int interviewId, int afterOrderNumber)
+        public async  Task<MockInterviewQuestion?> GetNextMainQuestionAsync(int interviewId, int afterOrderNumber)
         {
-            var next = context.MockInterviewQuestions
+            var next =await context.MockInterviewQuestions
         .Where(q => q.MockInterviewId == interviewId && !q.IsFollowUp && q.OrderNumber > afterOrderNumber)
         .OrderBy(q => q.OrderNumber)
-        .FirstOrDefault();
-            return Task.FromResult(next);
+        .FirstOrDefaultAsync();
+            return next;
         }
         public async Task<List<MockInterviewQuestion>> GetAllAnsweredAsync(
     int mockInterviewId)

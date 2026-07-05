@@ -104,7 +104,7 @@ builder.Services.AddHttpClient();
 builder.Services.AddScoped<IUploadToAzure, UploadToAzure>();
 builder.Services.AddScoped<ICVServices, CvServices>();
 builder.Services.AddScoped<INotificationService, NotificationService>();
-builder.Services.AddScoped<IGeminiService, GeminiService>();
+builder.Services.AddScoped<IGeminiService, GroqService>();
 builder.Services.AddScoped<IStorageService, BackBlazeService>();
 builder.Services.AddScoped<SkillsService>();
 builder.Services.AddTransient<IValidator<CompanyRegisterDTO>, RegisterValidation>();

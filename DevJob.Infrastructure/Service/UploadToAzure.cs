@@ -15,16 +15,13 @@ namespace DevJob.Infrastructure.Service
         private readonly BlobContainerClient blobContainerClient;
         private readonly BlobServiceClient blobServiceClient;
         private IConfiguration configuration;
-      //  private readonly ICVServices cVServices;
         private string azureConnectionString;
         private readonly AppDbContext context;
         public UploadToAzure(IConfiguration configuration
-           ///ICVServices cVServices
             ,AppDbContext context )
         {
             this.configuration = configuration;
             this.context = context;
-           // this.cVServices = cVServices;
             azureConnectionString = configuration["Azure"];
             blobServiceClient = new BlobServiceClient(azureConnectionString);
             blobContainerClient = blobServiceClient.GetBlobContainerClient("cvs");

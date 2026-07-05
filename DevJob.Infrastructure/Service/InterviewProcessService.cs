@@ -52,8 +52,7 @@ namespace DevJob.Infrastructure.Service
 
                 if (result is null || !result.Success)
                     throw new Exception(result?.Message ?? "Analysis returned null");
-
-                // حفظ نتائج كل نوع تحليل في entity منفصلة
+                await unitOfWork.BeginTransaction();
                 if (result.BodyLanguage is not null)
                     await unitOfWork.FaceAnalysisResult.AddAsync(new FaceAnalysisResult
                     {
@@ -64,7 +63,7 @@ namespace DevJob.Infrastructure.Service
                         AvgBrowTensionScore = result.BodyLanguage.AvgBrowTensionScore,
                         TotalFaceTouchEvents = result.BodyLanguage.TotalFaceTouchEvents,
                         BlinkRatePerMinute = result.BodyLanguage.BlinkRatePerMinute,
-                        DominantHeadMovementType = result.BodyLanguage.DominantHeadMovementType, // ← جديد
+                        DominantHeadMovementType = result.BodyLanguage.DominantHeadMovementType, 
                         FramesWithFaceDetectedPct = result.BodyLanguage.FramesWithFaceDetectedPct,
                         FramesWithPoseDetectedPct = result.BodyLanguage.FramesWithPoseDetectedPct,
                         FramesWithHandDetectedPct = result.BodyLanguage.FramesWithHandDetectedPct,
@@ -102,12 +101,13 @@ namespace DevJob.Infrastructure.Service
 
                 video.Status = VideoStatus.Completed;
                 await unitOfWork.SaveChangesAsync();
+                await unitOfWork.CommitAsync();
             }
             catch (Exception ex)
             {
                 video.Status = VideoStatus.Failed;
                 video.ErrorMessage = ex.Message;
-                await unitOfWork.SaveChangesAsync();
+                await unitOfWork.RollBackAsync();
                 throw;
             }
         }

@@ -256,7 +256,7 @@ know this topic), return:
         private string CleanJsonResponse(string response)
         {
             if (string.IsNullOrEmpty(response))
-                throw new Exception("Empty response from Gemini");
+                throw new Exception("Empty response from Groq");
 
             response = response.Trim();
             if (response.StartsWith("```json"))
