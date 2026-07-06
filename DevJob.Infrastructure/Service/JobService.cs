@@ -478,7 +478,7 @@ namespace DevJob.Infrastructure.Service
                 if (updateStatusDto.status != Status.New)
                 {
                     var res = await notificationService.SendNotification(user.UserId, title, message);
-                    var saveNotification = await notificationService.SaveNotification(updateStatusDto.UserId, message, title);
+                    var saveNotification = await notificationService.SaveNotification(user.UserId, message, title);
                     if (!res.Success || !saveNotification)
                         throw new Exception(res.Message);
                 }

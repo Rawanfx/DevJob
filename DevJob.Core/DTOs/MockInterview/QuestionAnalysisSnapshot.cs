@@ -15,7 +15,6 @@
 
     // Tone
     public string? DominantEmotion { get; init; }
-    public float? StrainScore { get; init; }
 
     // Body Language
     public float? AvgEyeContactPct { get; init; }

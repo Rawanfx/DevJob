@@ -25,7 +25,7 @@ namespace DevJob.API
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
             using var timer = new PeriodicTimer(pollInterval);
-            await ProcessQueuedVideosAsync(stoppingToken); // شوفة فورية عند بدء التشغيل
+            await ProcessQueuedVideosAsync(stoppingToken); 
 
             while (!stoppingToken.IsCancellationRequested
                    && await timer.WaitForNextTickAsync(stoppingToken))

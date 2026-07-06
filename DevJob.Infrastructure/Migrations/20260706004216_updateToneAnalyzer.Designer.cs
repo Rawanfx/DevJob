@@ -4,6 +4,7 @@ using DevJob.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace DevJob.Infrastructure.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260706004216_updateToneAnalyzer")]
+    partial class updateToneAnalyzer
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -527,6 +530,9 @@ namespace DevJob.Infrastructure.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<int>("UserCvData1Id")
+                        .HasColumnType("int");
+
                     b.Property<string>("UserId")
                         .IsRequired()
                         .HasColumnType("nvarchar(450)");
@@ -535,6 +541,8 @@ namespace DevJob.Infrastructure.Migrations
                         .HasColumnType("datetime2");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("UserCvData1Id");
 
                     b.HasIndex("UserId");
 
@@ -1365,13 +1373,21 @@ namespace DevJob.Infrastructure.Migrations
 
             modelBuilder.Entity("DevJob.Domain.Entities.Notification", b =>
                 {
-                    b.HasOne("DevJob.Domain.Entities.ApplicationUser", "user")
+                    b.HasOne("DevJob.Domain.Entities.UserCvData", "UserCvData1")
+                        .WithMany()
+                        .HasForeignKey("UserCvData1Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("DevJob.Domain.Entities.ApplicationUser", "ApplicationUser")
                         .WithMany()
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
-                    b.Navigation("user");
+                    b.Navigation("ApplicationUser");
+
+                    b.Navigation("UserCvData1");
                 });
 
             modelBuilder.Entity("DevJob.Domain.Entities.ProjectSkills", b =>

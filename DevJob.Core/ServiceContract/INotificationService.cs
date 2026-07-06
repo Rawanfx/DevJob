@@ -13,7 +13,7 @@ namespace DevJob.Application.ServiceContract
     {
         Task<ResultDto> AddDeviceId(string userId, string deviceId);
         Task<ResponseDto> SendNotification(string user, string title, string message);
-        Task<bool> SaveNotification(int userId, string message, string title);
+        Task<bool> SaveNotification(string userId, string message, string title);
         Task<DisplayNotificationResultDto> DisplayNotification(string user);
     }
 }

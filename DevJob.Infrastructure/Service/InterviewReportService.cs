@@ -71,7 +71,6 @@ namespace DevJob.Infrastructure.Service
 
                     // Tone — from ToneAnalysisResult
                     DominantEmotion = tone?.DominantEmotion,
-                    StrainScore = tone?.StrainScore,
 
                     // Body Language — from FaceAnalysisResult
                     AvgEyeContactPct = face?.AvgEyeContactPct,

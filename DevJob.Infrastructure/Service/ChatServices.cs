@@ -268,7 +268,7 @@ namespace DevJob.Infrastructure.Service
                 });
                 //send notification using one signal
                 //save notification in database
-                var res = await notificationService.SaveNotification(recieverId, sendMessageDto.Message,title);
+                var res = await notificationService.SaveNotification(resciever, sendMessageDto.Message,title);
 
                
                var sendRes= await notificationService.SendNotification(resciever, title, sendMessageDto.Message);

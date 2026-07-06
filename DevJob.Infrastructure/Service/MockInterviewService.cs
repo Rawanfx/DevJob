@@ -153,7 +153,7 @@ namespace DevJob.Infrastructure.Service
             };
         }
 
-        public async Task<SubmitAnswerResult> SubmitAnswerAndGetNextQuestion(Guid videoId,string userid)
+        public async Task<SubmitAnswerResult> SubmitAnswerAndGetNextQuestion(Guid videoId, string userid)
         {
             var video = await unitOfWork.InterviewVideo.FirstOrDefaultAsync(x => x.Id == videoId);
             if (video == null)
@@ -171,27 +171,21 @@ namespace DevJob.Infrastructure.Service
             if (interview is null)
                 return new SubmitAnswerResult { Success = false, Message = "Associated interview not found." };
 
-            var answeredQuestionsCount = await unitOfWork.InterviewVideo
-             .CountAsync(v => v.MockInterviewQuestion.MockInterviewId == interview.Id );
-            if (answeredQuestionsCount >= 7)
-                return new SubmitAnswerResult() { Success = true, Message = "End of Questions" };
             await unitOfWork.BeginTransaction();
             try
             {
-                // ── 3) Mark queued, fast-transcribe this short clip ────
                 video.Status = VideoStatus.Processing;
                 video.UpdatedAt = DateTimeOffset.UtcNow;
 
                 var transcribedText = await quickTranscriptionService.TranscribeQuickAsync(video.Id.ToString());
 
-                // ── 4) Context for scoring / follow-up ─────────────────
-                var userId = await unitOfWork.UserCvData.FirstOrDefaultAsync(x => x.UserId == userid && x.cvId == interview.CvId);
-                if (userId == null)
-                    return new SubmitAnswerResult() { Success = false, Message = "User not found" };
-                var jobTitle = interview.Track;
-                var skills = await unitOfWork.UserSkills.GetUserSkills(interview.CvId, userId.Id);
+                var userCv = await unitOfWork.UserCvData.FirstOrDefaultAsync(x => x.UserId == userid && x.cvId == interview.CvId);
+                if (userCv == null)
+                    return new SubmitAnswerResult { Success = false, Message = "User not found" };
 
-                // ── 5) Score the answer, persist onto the question ─────
+                var jobTitle = interview.Track;
+                var skills = await unitOfWork.UserSkills.GetUserSkills(interview.CvId, userCv.Id);
+
                 var evaluation = await geminiService.EvaluateAnswer(question.Question, transcribedText, jobTitle, skills);
 
                 question.Answer = transcribedText;
@@ -200,56 +194,36 @@ namespace DevJob.Infrastructure.Service
                 question.CorrectPoints = evaluation.Correct_Points;
                 question.MissingPoints = evaluation.Missing_Points;
                 question.SuggestedAnswer = evaluation.Suggested_Answer;
-                // FinalAvgEyeContact / FinalSpeechConfidence / FinalDominantEmotion
-                // stay null here — they're filled in later by the background
-                // deep-analysis worker once body language + tone processing finish.
 
-                // ── 6) Decide on a follow-up ────────────────────────────
-                var followUp = await geminiService.ShouldAskFollowUp(
-                    question.Question, transcribedText, evaluation.Score, jobTitle, skills);
+                var nextQuestion = await unitOfWork.MockInterviewQuestion
+                    .FirstOrDefaultAsync(q => q.MockInterviewId == interview.Id
+                                           && q.OrderNumber == question.OrderNumber + 1);
 
-                MockInterviewQuestion? nextQuestion;
+                string? nextUploadUrl = null;
+                string? nextVideoId = null;
 
-                // Cap follow-up depth at one level: don't follow-up a follow-up.
-                if (followUp.NeedFollowUp && !question.IsFollowUp)
+                if (nextQuestion is not null)
                 {
-                    nextQuestion = new MockInterviewQuestion
+                    var newObjectKey = Guid.NewGuid();
+                    var newStorageKey = $"videos/{newObjectKey}.mp4";
+
+                    var nextVideo = new InterviewVideo
                     {
-                        MockInterviewId = question.MockInterviewId,
-                        Question = followUp.FollowUpQuestion ?? "Can you elaborate on your previous answer?",
-                        OrderNumber = question.OrderNumber,
-                        IsFollowUp = true,
-                        ParentQuestionId = question.Id,
-                        AIFeedback = followUp.Reason,
-                        
+                        Id = newObjectKey,
+                        QuestionId = nextQuestion.Id,
+                        StorageKey = newStorageKey,
                     };
-                    await unitOfWork.MockInterviewQuestion.AddAsync(nextQuestion);
+                    await unitOfWork.InterviewVideo.AddAsync(nextVideo);
+
+                    nextUploadUrl = storageService.GeneratePresignedUploadUrl(newObjectKey.ToString());
+                    nextVideoId = nextVideo.Id.ToString();
                 }
                 else
-                {
-                    // Resolve which "root" order number to resume from. If the
-                    // question just answered was itself a follow-up, resume
-                    // after its PARENT's position, not its own.
-                    int rootOrderNumber = question.OrderNumber;
-                    if (question.IsFollowUp && question.ParentQuestionId.HasValue)
-                    {
-                        var parent = await unitOfWork.MockInterviewQuestion
-                            .FirstOrDefaultAsync(q => q.Id == question.ParentQuestionId.Value);
-                        rootOrderNumber = parent?.OrderNumber ?? question.OrderNumber;
-                    }
-
-                    nextQuestion = await unitOfWork.MockInterviewQuestion
-                        .GetNextMainQuestionAsync(question.MockInterviewId, rootOrderNumber);
-                }
-
-                if (nextQuestion is null || answeredQuestionsCount ==7)
                 {
                     interview.Status = InterviewStatus.Completed;
                 }
 
                 await unitOfWork.SaveChangesAsync();
-
-
                 await unitOfWork.CommitAsync();
 
                 return new SubmitAnswerResult
@@ -262,9 +236,10 @@ namespace DevJob.Infrastructure.Service
                         {
                             QuestionId = nextQuestion.Id,
                             Question = nextQuestion.Question,
-                            IsFollowUp = nextQuestion.IsFollowUp,
-                          //  TotalQuestions= answeredQuestionsCount,
+                            IsFollowUp = false,
                         },
+                    Upload = nextUploadUrl,
+                    VideoId = nextVideoId,
                 };
             }
             catch
@@ -273,6 +248,6 @@ namespace DevJob.Infrastructure.Service
                 throw;
             }
         }
-    
+
     }
 }

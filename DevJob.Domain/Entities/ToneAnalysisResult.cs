@@ -15,13 +15,8 @@ namespace DevJob.Domain.Entities
         public float PitchStd { get; set; }
         public float EnergyMean { get; set; }
         public float SpeakingRate { get; set; }
-        public float StrainScore { get; set; }
 
-        // مشتقة من StrainScore، مش حقل خام مخزّن، عشان متفضلش قيمتين
-        // ممكن يحصل بينهم تعارض (لو حد عدّل واحدة ونسي التانية)
-        [NotMapped]
-        public float SpeechConfidence => 100f - StrainScore;
-
+    
         public MockInterviewQuestion MockInterviewQuestion { get; set; } = null!;
     }
 }

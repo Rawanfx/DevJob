@@ -45,5 +45,4 @@ public class ToneAnalysisDto
     public float PitchStd { get; set; }
     public float EnergyMean { get; set; }
     public float SpeakingRate { get; set; }
-    public float StrainScore { get; set; }
 }

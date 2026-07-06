@@ -12,12 +12,12 @@ using System.Text.Json;
 
 namespace DevJob.Infrastructure.Service
 {
-    public class GeminiService : IGeminiService
+    public class GroqService : IGeminiService
     {
         private readonly IConfiguration configuration;
 
         private readonly ChatClient chat;
-        public GeminiService(IConfiguration configuration)
+        public GroqService(IConfiguration configuration)
         {
             this.configuration = configuration;
             string apiKey = configuration["Groq:ApiKey"];
@@ -312,8 +312,7 @@ know this topic), return:
                                   $"Pauses: {q.PauseCount}");
 
                 if (!string.IsNullOrEmpty(q.DominantEmotion))
-                    sb.AppendLine($"Tone: {q.DominantEmotion} | " +
-                                  $"Strain: {q.StrainScore}/100");
+                    sb.AppendLine($"Tone: {q.DominantEmotion}" );
 
                 if (q.AvgEyeContactPct.HasValue)
                     sb.AppendLine($"Body Language: " +

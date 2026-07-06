@@ -92,11 +92,9 @@ namespace DevJob.Infrastructure.Service
                         PitchStd = result.Tone.PitchStd,
                         EnergyMean = result.Tone.EnergyMean,
                         SpeakingRate = result.Tone.SpeakingRate,
-                        StrainScore = result.Tone.StrainScore,
                     });
 
                 question.FinalAvgEyeContact = result.BodyLanguage?.AvgEyeContactPct;
-                question.FinalSpeechConfidence = result.Tone is not null ? 100f - result.Tone.StrainScore : null;
                 question.FinalDominantEmotion = result.Tone?.DominantEmotion;
 
                 video.Status = VideoStatus.Completed;

@@ -48,19 +48,17 @@ namespace DevJob.Infrastructure.Service
             await unitOfWork.SaveChangesAsync();
             return new ResultDto() { Success = true, Message = "Device Id added" };
         }
-        public async Task<bool> SaveNotification(int user, string message, string title)
+        public async Task<bool> SaveNotification(string user, string message, string title)
         {
             Notification notification = new()
             {
                 Message = message,
                 Title = title,
-                date = DateTime.Now
+                date = DateTime.UtcNow,
+                UserId=user,
+                
             };
-            if (await unitOfWork.UserCvData.AnyAsync(x => x.Id == user))
-                notification.userId = user;
-            else
-                notification.CompanyId = user;
-                try
+            try
                 {
                     await unitOfWork.Notifications.AddAsync(notification);
                     await unitOfWork.SaveChangesAsync();
@@ -112,15 +110,9 @@ namespace DevJob.Infrastructure.Service
         }
         public async Task<DisplayNotificationResultDto> DisplayNotification(string user)
         {
-           
-            var userCvIds = await unitOfWork.UserCvData.Where(x => x.UserId == user).Select(x => x.Id).ToListAsync();
-            var companyId = await unitOfWork.CompanyProfile.Where(x => x.ApplicationUser == user).Select(x => x.Id).FirstOrDefaultAsync();
-
-            if (!userCvIds.Any() && companyId == 0)
-                return new DisplayNotificationResultDto() { Success = false, Message = "User not found" };
-
+          
             var notificationEntities = await unitOfWork.Notifications
-                .Where(x => (x.userId != null && userCvIds.Contains(x.userId.Value)) || (x.CompanyId != null && x.CompanyId.Value == companyId))
+                .Where(x => x.UserId==user)
                 .OrderByDescending(x => x.date)
                 .ToListAsync();
 
