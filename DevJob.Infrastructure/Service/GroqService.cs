@@ -12,7 +12,7 @@ using System.Text.Json;
 
 namespace DevJob.Infrastructure.Service
 {
-    public class GroqService : IGeminiService
+    public class GroqService : ILLMService
     {
         private readonly IConfiguration configuration;
 
@@ -93,7 +93,6 @@ Return ONLY a valid JSON object, nothing else:
                 bodyLanguagePart = $@"
 Body Language & Speech Analysis:
 - Average Eye Contact: {bodyLanguageSummary.AvgEyeContact}/100
-- Average Confidence: {bodyLanguageSummary.AvgConfidence}/100
 - Dominant Emotion: {bodyLanguageSummary.DominantEmotion}
 - Average Speech Confidence: {bodyLanguageSummary.AvgSpeechConfidence}/100
 - Speech Pace: {bodyLanguageSummary.SpeechPace}

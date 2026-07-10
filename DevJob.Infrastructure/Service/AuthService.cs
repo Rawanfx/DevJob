@@ -10,7 +10,7 @@ using Serilog;
 using System.Text;
 namespace DevJob.Infrastructure.Service
 {
-    public class AuthService : IAuthService 
+    public class AuthService : IAuthService
     {
         private readonly UserManager<ApplicationUser> userManager;
         private readonly SignInManager<ApplicationUser> signInManager;
@@ -26,9 +26,9 @@ namespace DevJob.Infrastructure.Service
             SignInManager<ApplicationUser> signInManager,
             IJwtServices jwtServices,
             IConfiguration configuration
-            ,IUnitOfWork unitOfWork
-            ,IMailServices mailServices
-            ,IWebHostEnvironment webHostEnvironment)
+            , IUnitOfWork unitOfWork
+            , IMailServices mailServices
+            , IWebHostEnvironment webHostEnvironment)
         {
             this.mapper = mapper;
             this.userManager = userManager;
@@ -46,14 +46,16 @@ namespace DevJob.Infrastructure.Service
             string finalContent = content.Replace(replaceWord, url);
             await mailServices.SendEmailAsync(mailTo: Email, subject: "DevJob", null, finalContent);
         }
-        public async Task< AuthResponse> UserRegister(RegisterDTO registerDTO)
+        public async Task<AuthResponse> UserRegister(RegisterDTO registerDTO)
         {
             await unitOfWork.BeginTransaction();
-            try { 
+            try
+            {
                 var user = mapper.Map<ApplicationUser>(registerDTO);
                 user.CreatedAt = DateOnly.FromDateTime(DateTime.Now);
                 var response = await userManager.CreateAsync(user, registerDTO.Password);
-                if (response.Succeeded) {
+                if (response.Succeeded)
+                {
 
                     await userManager.AddToRoleAsync(user, "DEVELOPER");
                     //get profile user 
@@ -89,67 +91,68 @@ namespace DevJob.Infrastructure.Service
                         RefreshtTokenExpirationDate = user.RefreshTokenExpirationDate
                     };
                 }
-                else {
+                else
+                {
                     string errors = string.Join(", ", response.Errors.Select(x => x.Description));
                     throw new ArgumentException(errors);
                 }
             }
 
-            catch(Exception ex)
+            catch (Exception ex)
             {
-               await unitOfWork.RollBackAsync();
+                await unitOfWork.RollBackAsync();
                 throw;
             }
-            
+
         }
 
         public async Task<AuthResponse> Login(LoginDTO loginDTO)
         {
             //check if user is found
             var user = await userManager.FindByEmailAsync(loginDTO.Email);
-           if (user==null || !await userManager.CheckPasswordAsync(user, loginDTO.Password))
+            if (user == null || !await userManager.CheckPasswordAsync(user, loginDTO.Password))
             {
                 //not found
                 throw new UnauthorizedAccessException("Invalid Email or Password");
             }
-           //check email confirmation
+            //check email confirmation
             if (!await userManager.IsEmailConfirmedAsync(user))
                 throw new UnauthorizedAccessException("Please confirm your email first.");
 
             await signInManager.SignInAsync(user, false);
-           
+
             //create token
             string token = await jwtServices.CreateTokenAsync(user);
             var expire = configuration["RefreshToken:Expire"];
             string refreshToken = jwtServices.GenerateRefreshToken();
             user.RefreshToken = refreshToken;
             user.RefreshTokenExpirationDate = DateTime.Now.AddMinutes(Convert.ToInt32(expire));
-           var res= await userManager.UpdateAsync(user);
+            var res = await userManager.UpdateAsync(user);
             if (!res.Succeeded)
                 throw new UnauthorizedAccessException("Error occurred while updating user tokens.");
-            
+
             return new AuthResponse()
             {
                 Success = true,
                 Token = token,
-                RefreshToken=user.RefreshToken,
-                RefreshtTokenExpirationDate=user.RefreshTokenExpirationDate
+                RefreshToken = user.RefreshToken,
+                RefreshtTokenExpirationDate = user.RefreshTokenExpirationDate
             };
         }
-        public async Task<AuthResponse> ConfirmEmail(string email,string token)
+        public async Task<AuthResponse> ConfirmEmail(string email, string token)
         {
             var user = await userManager.FindByEmailAsync(email);
             if (user == null)
                 return new AuthResponse() { Success = false, Message = "Invalid Email" };
             var encodedToken = Uri.UnescapeDataString(token);
 
-            var res =await userManager.ConfirmEmailAsync(user, encodedToken);
+            var res = await userManager.ConfirmEmailAsync(user, encodedToken);
             if (res.Succeeded)
                 return new AuthResponse() { Success = true };
             var errors = string.Join(", ", res.Errors.Select(e => e.Description));
             throw new InvalidOperationException(errors);
         }
-     //modification
+        //modification
         public async Task<PasswordDto> ForgetPassword(ForgetPasswordDTO forgetPasswordDTO)
         {
             var user = await userManager.FindByEmailAsync(forgetPasswordDTO.Email);
@@ -168,17 +171,17 @@ namespace DevJob.Infrastructure.Service
             string finalContent = content.Replace("resetPassword", callback);
             await mailServices.SendEmailAsync(mailTo: user.Email, subject: "DevJob", null, callback);
 
-           
-                return new PasswordDto()
-                {
-                    Success=true,
-                };
+
+            return new PasswordDto()
+            {
+                Success = true,
+            };
         }
         public async Task<PasswordDto> ResetPassword(ResetPasswordDTO resetPasswordDTO)
         {
             //find user
             var user = await userManager.FindByEmailAsync(resetPasswordDTO.Email);
-            if (user==null || !await userManager.IsEmailConfirmedAsync(user))
+            if (user == null || !await userManager.IsEmailConfirmedAsync(user))
             {
                 throw new UnauthorizedAccessException("Email not confirmed");
             }
@@ -187,7 +190,7 @@ namespace DevJob.Infrastructure.Service
             var result = await userManager.ResetPasswordAsync(user, tokn, resetPasswordDTO.Password);
             if (result.Succeeded)
                 return new PasswordDto() { Success = true };
-           throw new InvalidOperationException(string.Join(',', result.Errors.Select(x => x.Description)));
+            throw new InvalidOperationException(string.Join(',', result.Errors.Select(x => x.Description)));
         }
         public async Task<CompanyAuthResponse> CompanyRegister(CompanyRegisterDTO companyRegisterDTO)
         {
@@ -203,7 +206,7 @@ namespace DevJob.Infrastructure.Service
                     //get company profile
                     CompanyProfile company = mapper.Map<CompanyProfile>(companyRegisterDTO);
                     company.ApplicationUser = companyProfile.Id;
-                   
+
                     await unitOfWork.CompanyProfile.AddAsync(company);
                     await unitOfWork.SaveChangesAsync();
                     //send email
@@ -214,7 +217,7 @@ namespace DevJob.Infrastructure.Service
                     await sendEmail("ConfirmEmail.html", "{ConfirmationLink}", confirmationLink, companyProfile.Email);
 
                     var jwtToken = await jwtServices.CreateTokenAsync(companyProfile);
-                   await unitOfWork.CommitAsync();
+                    await unitOfWork.CommitAsync();
                     return new CompanyAuthResponse()
                     {
                         Email = companyProfile.Email,
@@ -230,9 +233,9 @@ namespace DevJob.Infrastructure.Service
                     throw new ArgumentException(errors);
                 }
             }
-            catch(Exception ex)
+            catch (Exception ex)
             {
-               await unitOfWork.RollBackAsync();
+                await unitOfWork.RollBackAsync();
                 throw;
             }
         }

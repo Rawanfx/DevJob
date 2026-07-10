@@ -10,10 +10,10 @@ namespace DevJob.Infrastructure.Service
     public class MockInterviewService : IMockInterviewService
     {
         private readonly IUnitOfWork unitOfWork;
-        private readonly IGeminiService geminiService;
+        private readonly ILLMService geminiService;
         private readonly IStorageService storageService;
         private readonly IQuickTranscriptionService quickTranscriptionService;
-        public MockInterviewService (IUnitOfWork unitOfWork,IGeminiService geminiService,
+        public MockInterviewService (IUnitOfWork unitOfWork,ILLMService geminiService,
             IStorageService storageService,IQuickTranscriptionService quickTranscriptionService)
         {
             this.unitOfWork = unitOfWork;

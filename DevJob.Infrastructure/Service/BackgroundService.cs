@@ -18,6 +18,7 @@ using System.Text.Json.Nodes;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Web;
+using Serilog;
 
 
 namespace DevJob.Infrastructure.Service
@@ -48,8 +49,6 @@ namespace DevJob.Infrastructure.Service
             // 2. مسح الـ HTML Tags تماماً (أي حاجة بين < >)
             string noHtml = Regex.Replace(decoded, "<.*?>", string.Empty);
 
-            // 3. مسح الرموز الغريبة والايموجيز (عشان الـ AI ميهنجش)
-            // بنسيب بس الحروف (عربي/إنجليزي) والأرقام وعلامات الترقيم
             string pattern = @"[^a-zA-Z0-9\u0600-\u06FF\s,.\-\(\):!&]";
             string noSpecialChars = Regex.Replace(noHtml, pattern, string.Empty);
 
@@ -470,97 +469,118 @@ namespace DevJob.Infrastructure.Service
 
             await unitOfWork.SaveChangesAsync();
         }
-     
+
         public async Task PrepareRecommendedJobs(string user, int cvId)
         {
-            //first in db
-            //if not found serpApi -> matching
-            var userId = await unitOfWork.UserCvData.Where(x => x.UserId == user
-            && x.cvId == cvId
-            && x.CV.IsDeleted == false).Select(x => x.Id).FirstOrDefaultAsync();
+            const int BatchSize = 200;
+            const int MatchThreshold = 65;
 
-            var userdata = await unitOfWork.UserCvData .GetActiveUserWithCvById(userId);
-             
+            var userdata = await unitOfWork.UserCvData
+                .Where(x => x.UserId == user
+                         && x.cvId == cvId
+                         && x.CV.IsDeleted == false)
+                .Select(x => new { x.Id, x.JobTitle })
+                .FirstOrDefaultAsync();
+
             if (userdata == null)
                 return;
 
-            var skill = await unitOfWork.UserSkills .GetUserSkills(cvId, userId);
+            var userId = userdata.Id;
 
-            var jobs = await unitOfWork.Jobs
-                .Where(x=>x.IsActive)
-                .ToListAsync();
-            var jobIds = jobs.Select(x => x.Id).ToList();
-            var jobSkills = await unitOfWork.Jobs .GetJobSkills(jobIds);
-            // cv_text = $"job_title: {x.First().jobTitle}, Skills: {string.Join(", ", x.Select(y => y.skills).Distinct())}"  
-            //string.Join(',', skill, userdata.JobTitle);
-            var cv_text = $"job_title: {userdata.JobTitle}, Skills: {string.Join(",",skill)}";
+            var skill = await unitOfWork.UserSkills.GetUserSkills(cvId, userId);
+            var skillsCsv = string.Join(",", skill);
 
-            var matchUrl = configuration["matchScoreUrl"];
-            List<RecommendedJobs> RecommendedJobs = new();
-            var cv = new AiUserRequest() {
-                cv_name =userdata.CV.FileName,
-                cv_text=cv_text,
-                user_id=userdata.Id
-                };
+            var matchUrl = configuration["prepareMatchUrl"];
+            var recommendedJobs = new List<RecommendedJobs>();
+
             using var httpClient = httpClientFactory.CreateClient();
-            if (jobs!=null && jobs.Count > 0)
+
+            int lastJobId = 0;
+
+            while (true)
             {
-                foreach (var job in jobs)
+                var batch = await unitOfWork.Jobs
+                    .Where(x => x.IsActive && x.Id > lastJobId)
+                    .OrderBy(x => x.Id)
+                    .Take(BatchSize)
+                    .Select(x => new RequestJobs { id = x.Id, description = x.Description })
+                    .ToListAsync();
+
+                if (batch.Count == 0)
+                    break;
+
+                lastJobId = batch.Max(x => x.id);
+
+                var aiRequest = new PrepareRecommendedRequest
                 {
-                    var currentJobSkills = string.Join(", ", jobSkills.Where(x => x.JobId == job.Id).Select(x => x.Skills));
-                    var jobData = $"Description: {job.Description}. Required Skills: {currentJobSkills}";
-                    AiMatcheRequest request = new AiMatcheRequest()
+                    cv_skills = skillsCsv,
+                    cv_title = userdata.JobTitle,
+                    jobs = batch
+                };
+
+                HttpResponseMessage response;
+                try
+                {
+                    response = await httpClient.PostAsJsonAsync(matchUrl, aiRequest);
+                }
+                catch (Exception ex)
+                {
+                    Log.Error(ex);
+
+                    continue; 
+                }
+
+                if (!response.IsSuccesatusCode)
+                {
+                    Log.Error(ex, "Failed sending batch after jobId {LastJobId}", lastJobId);
+                    continue;
+                }
+
+                var jsonString = await response.Content.ReadAsStringAsync();
+
+                var aiResponse = JsonSerializer.Deserialize<PrepareRecommendedResponse>(jsonString);
+
+
+                if (aiResponse == null || !aiResponse.Success || aiResponse.results == null)
+                {
+                    Log.Error("From response "+aiResponse.results);
+                    continue;
+                }
+
+                foreach (var res in aiResponse.results)
+                {
+                    if (res.match_score < MatchThreshold)
+                        continue;
+
+                    if (!int.TryParse(res.job_index, out int jobId))
+                        continue;
+
+                    recommendedJobs.Add(new RecommendedJobs
                     {
-                        cvs = new List<AiUserRequest>() { cv },
-                        job_description = jobData
-                    };
-                    var response = await httpClient.PostAsJsonAsync(matchUrl, request);
-                    if (response.IsSuccessStatusCode)
-                    {
-                        var jsonString = await response.Content.ReadAsStringAsync();
-                        var data = JsonSerializer.Deserialize<AiResponseDto>(jsonString);
-
-                        if (data != null && data.results != null)
-                        {
-                            foreach (var i in data.results)
-                            {
-                                if (i.match_percentage >= 65)
-                                {
-                                    //send email
-
-                                    //string emailBody = $@"
-                                    //    <h3>Dear {userdata.Name},</h3>
-                                    //    <p>Our AI found a <b>{i.match_percentage}%</b> match for the <b>{jobData.name}</b> .</p>
-                                    //    <p><b>AI Recommendation:</b> {i.recommendation}</p>
-                                    //    <p><b>Recommended to learn:</b> {string.Join(", ", i.missing_skills)}</p>
-                                    //    <p>Don't miss this opportunity!</p>
-                                    //    <a href={configuration["jobsUrl"]} style='background-color: #4CAF50; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;'>Apply Now</a>";
-
-                                    //BackgroundJob.Enqueue<IMailServices>(x => x.SendEmailAsync(userdata.Email, "DevJob", null, emailBody));
-                                    ////save data in database 
-                                    RecommendedJobs recommendedJobs = new RecommendedJobs()
-                                    {
-                                        IsSent = true,
-                                        jobId = job.Id,
-                                        MatchScore = i.match_percentage,
-                                        userId = userId
-                                    };
-                                    RecommendedJobs.Add(recommendedJobs);
-                                }
-                            }
-                        }
-                    }
+                        IsSent = true,
+                        jobId = jobId,
+                        MatchScore = res.match_score,
+                        userId = userId
+                    });
                 }
             }
-            await unitOfWork.RecommendedJobs.AddRangeAsync(RecommendedJobs);
-            await unitOfWork.SaveChangesAsync();
-             if (RecommendedJobs.Count < 10)
-             {
-                    //get search key for this user
-               var searchKey = await unitOfWork.SearchKeyWords.Where(x => x.cvId == cvId).Select(x => x.Name).ToListAsync();
-               var jobsFromSearch= await GetNewJobsFromSerpApi(searchKey);
-               await ProcessAiMatching(userId, skill, jobsFromSearch);
-             }
+
+            if (recommendedJobs.Count > 0)
+            {
+                await unitOfWork.RecommendedJobs.AddRangeAsync(recommendedJobs);
+                await unitOfWork.SaveChangesAsync();
+            }
+
+            if (recommendedJobs.Count < 10)
+            {
+                var searchKey = await unitOfWork.SearchKeyWords
+                    .Where(x => x.cvId == cvId)
+                    .Select(x => x.Name)
+                    .ToListAsync();
+
+                var jobsFromSearch = await GetNewJobsFromSerpApi(searchKey);
+                await ProcessAiMatching(userId, skill, jobsFromSearch);
+            }
         }
         //public async Task PrepareWithoutAi(int user, int cvId)
         //{
@@ -624,7 +644,7 @@ namespace DevJob.Infrastructure.Service
         //  //  await ProcessAiMatching(userCvData.Id, userSkills, jobsQuery);
         //}
 
-       
+
         private async Task ProcessAiMatching(int userId, List<string> skills, List<Job> jobs)
         {
             if (!jobs.Any()) return;

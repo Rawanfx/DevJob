@@ -4,7 +4,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 namespace DevJob.Application.ServiceContract
 {
-    public interface IGeminiService
+    public interface ILLMService
     {
          Task<List<string>> GenerateGeneralInterviewQuestions(
       string jobTitle,

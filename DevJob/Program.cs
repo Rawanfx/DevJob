@@ -17,6 +17,7 @@ using DevJob.Infrastructure.Validation;
 using FluentValidation;
 using Hangfire;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -39,6 +40,12 @@ var s3Config = new AmazonS3Config
     ServiceURL = "https://s3.us-east-005.backblazeb2.com",
     ForcePathStyle = true
 };
+
+var keysFolder = Path.Combine(builder.Environment.ContentRootPath, "App_Data", "DataProtectionKeys");
+builder.Services.AddDataProtection()
+    .PersistKeysToFileSystem(new DirectoryInfo(keysFolder))
+    .SetApplicationName("DevJob");
+
 builder.Services.AddSingleton<IAmazonS3>(sp =>
     new AmazonS3Client(minioSection["AccessKey"], minioSection["SecretKey"], s3Config));
 builder.Services.Configure<FastApiSettings>(builder.Configuration.GetSection("FastApi"));
@@ -104,7 +111,7 @@ builder.Services.AddHttpClient();
 builder.Services.AddScoped<IUploadToAzure, UploadToAzure>();
 builder.Services.AddScoped<ICVServices, CvServices>();
 builder.Services.AddScoped<INotificationService, NotificationService>();
-builder.Services.AddScoped<IGeminiService, GroqService>();
+builder.Services.AddScoped<ILLMService, GroqService>();
 builder.Services.AddScoped<IStorageService, BackBlazeService>();
 builder.Services.AddScoped<SkillsService>();
 builder.Services.AddTransient<IValidator<CompanyRegisterDTO>, RegisterValidation>();

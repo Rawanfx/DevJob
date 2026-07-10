@@ -9,14 +9,14 @@ namespace DevJob.Infrastructure.Service
     public class InterviewReportService : IInterviewReportService
     {
         private readonly IUnitOfWork _unitOfWork;
-        private readonly IGeminiService geminiService;
+        private readonly ILLMService lLmService;
 
         public InterviewReportService(
             IUnitOfWork unitOfWork,
-            IGeminiService geminiService)
+            ILLMService geminiService)
         {
             _unitOfWork = unitOfWork;
-            this.geminiService = geminiService;
+            this.lLmService = geminiService;
         }
 
         public async Task<MockInterviewReportDto> GenerateReportAsync(
@@ -82,7 +82,7 @@ namespace DevJob.Infrastructure.Service
             }
 
             // ── 4. Call Groq to generate report ───────────────────────────────
-            var groqResult = await geminiService.GenerateInterviewReportAsync(
+            var groqResult = await lLmService.GenerateInterviewReportAsync(
                 snapshots,
                 interview.Track,
                 cancellationToken);
@@ -92,7 +92,6 @@ namespace DevJob.Infrastructure.Service
             {
                 MockInterviewId = mockInterviewId,
                 OverallScore = groqResult.OverallScore,
-                CommunicationScore = groqResult.CommunicationScore,
                 ConfidenceScore = groqResult.ConfidenceScore,
                 BodyLanguageScore = groqResult.BodyLanguageScore,
                 EmotionalProfile = groqResult.EmotionalProfile,
